@@ -4,6 +4,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import CatalogPage from './pages/CatalogPage';
+import ItemDetailPage from './pages/ItemDetailPage';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<Layout />}>
           <Route path="/" element={<CatalogPage />} />
+          <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route element={<ProtectedRoute role="CONTRIBUTOR" />}>{/* contributor routes added in later tasks */}</Route>
           <Route element={<ProtectedRoute role="MODERATOR" />}>{/* moderator routes added in later tasks */}</Route>
         </Route>

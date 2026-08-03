@@ -25,3 +25,11 @@ export function useItems(filters: ItemFilters) {
     queryFn: () => apiClient<Item[]>(`/items${buildQuery(filters)}`),
   });
 }
+
+export function useItem(id: string) {
+  return useQuery({
+    queryKey: ['items', 'detail', id],
+    queryFn: () => apiClient<Item>(`/items/${id}`),
+    enabled: !!id,
+  });
+}
