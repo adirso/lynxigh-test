@@ -3,6 +3,7 @@ import cors from 'cors';
 import { errorHandler } from './middleware/error-handler.js';
 import { loadEnv } from './env.js';
 import { authRouter } from './auth/auth.routes.js';
+import { categoriesRouter } from './categories/categories.routes.js';
 import { asyncHandler } from './async-handler.js';
 
 export function createApp() {
@@ -18,6 +19,7 @@ export function createApp() {
   }));
 
   app.use('/auth', authRouter);
+  app.use('/categories', categoriesRouter);
 
   app.use(errorHandler);
 
