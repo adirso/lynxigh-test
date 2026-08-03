@@ -72,14 +72,11 @@ describe('attachUserIfPresent', () => {
 });
 
 describe('middleware chaining', () => {
-  it('requireAuth followed by requireRole chains correctly and throws 403 for wrong role', () => {
+  it('propagates a downstream ForbiddenError instead of remapping it to 401', () => {
     const token = signAccessToken({ sub: 'user-1', role: 'CONTRIBUTOR' });
     const { req, res, next } = mockReqRes({ authorization: `Bearer ${token}` });
-
-    requireAuth(req, res, () => {
-      expect(() => requireRole('MODERATOR')(req, res, next)).toThrow(
-        expect.objectContaining({ statusCode: 403 }),
-      );
-    });
+    expect(() =>
+      requireAuth(req, res, () => requireRole('MODERATOR')(req, res, next)),
+    ).toThrow(expect.objectContaining({ statusCode: 403 }));
   });
 });
