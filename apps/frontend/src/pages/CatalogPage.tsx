@@ -9,8 +9,12 @@ export default function CatalogPage() {
   const [categoryId, setCategoryId] = useState('');
   const [condition, setCondition] = useState('');
 
-  const { data: categories } = useCategories();
-  const { data: items, isLoading } = useItems({
+  const { data: categories, isError: categoriesIsError } = useCategories();
+  const {
+    data: items,
+    isLoading,
+    isError,
+  } = useItems({
     search: search || undefined,
     categoryId: categoryId || undefined,
     condition: condition || undefined,
@@ -51,7 +55,9 @@ export default function CatalogPage() {
           ))}
         </select>
       </div>
+      {categoriesIsError && <p className="error-text">Couldn't load categories. Please try again.</p>}
       {isLoading && <p>Loading…</p>}
+      {isError && <p className="error-text">Couldn't load the catalog. Please try again.</p>}
       <div className="item-grid">{items?.map((item) => <ItemCard key={item.id} item={item} />)}</div>
     </div>
   );

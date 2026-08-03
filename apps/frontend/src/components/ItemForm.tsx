@@ -27,7 +27,7 @@ export default function ItemForm({
   submitLabel: string;
   requirePhotos?: boolean;
 }) {
-  const { data: categories } = useCategories();
+  const { data: categories, isError: categoriesIsError } = useCategories();
   const [title, setTitle] = useState(initialValues?.title ?? '');
   const [description, setDescription] = useState(initialValues?.description ?? '');
   const [price, setPrice] = useState(initialValues?.price?.toString() ?? '');
@@ -148,6 +148,7 @@ export default function ItemForm({
             </option>
           ))}
         </select>
+        {categoriesIsError && <p className="error-text">Couldn't load categories. Please try again.</p>}
       </div>
 
       <div className="field">

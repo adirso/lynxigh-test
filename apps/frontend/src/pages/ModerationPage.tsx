@@ -4,10 +4,16 @@ import { useModerationQueue, useApproveItem, useRejectItem } from '../api/modera
 import { useItems } from '../api/items';
 import { ApiError } from '../lib/api-client';
 
+// The backend caps /items' pageSize at 100 (see items.schemas.ts). That's not
+// true pagination for the stat cards below — just a stopgap so the Published
+// and Rejected counts don't silently truncate at the default pageSize of 24
+// for any realistic catalog size in this project's scope.
+const STAT_PAGE_SIZE = 100;
+
 export default function ModerationPage() {
-  const { data: queue, isLoading } = useModerationQueue();
-  const { data: published } = useItems({ status: 'PUBLISHED' });
-  const { data: rejected } = useItems({ status: 'REJECTED' });
+  const { data: queue, isLoading, isError: queueIsError } = useModerationQueue();
+  const { data: published, isError: publishedIsError } = useItems({ status: 'PUBLISHED', pageSize: STAT_PAGE_SIZE });
+  const { data: rejected, isError: rejectedIsError } = useItems({ status: 'REJECTED', pageSize: STAT_PAGE_SIZE });
   const approveItem = useApproveItem();
   const rejectItem = useRejectItem();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -15,6 +21,7 @@ export default function ModerationPage() {
   const [error, setError] = useState<string | null>(null);
 
   if (isLoading) return <p>Loading…</p>;
+  if (queueIsError) return <p className="error-text">Couldn't load the moderation queue. Please try again.</p>;
 
   return (
     <div>
@@ -26,13 +33,16 @@ export default function ModerationPage() {
         </div>
         <div className="card">
           <div className="card-kicker">Published</div>
-          <div className="stat-num">{published?.length ?? 0}</div>
+          <div className="stat-num">{publishedIsError ? '—' : (published?.length ?? 0)}</div>
         </div>
         <div className="card">
           <div className="card-kicker">Rejected</div>
-          <div className="stat-num">{rejected?.length ?? 0}</div>
+          <div className="stat-num">{rejectedIsError ? '—' : (rejected?.length ?? 0)}</div>
         </div>
       </div>
+      {(publishedIsError || rejectedIsError) && (
+        <p className="error-text">Couldn't load full counts for one or more stat cards. Please try again.</p>
+      )}
 
       <table className="table">
         <thead>

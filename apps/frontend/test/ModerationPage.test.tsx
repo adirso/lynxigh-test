@@ -107,4 +107,57 @@ describe('ModerationPage', () => {
 
     expect(await screen.findByText('Reason required')).toBeInTheDocument();
   });
+
+  it('requests a large pageSize for the Published/Rejected stat counts so they are not capped at the default 24', async () => {
+    const requestedUrls: string[] = [];
+    server.use(
+      http.get(`${API_URL}/moderation/queue`, () => HttpResponse.json([])),
+      http.get(`${API_URL}/items`, ({ request }) => {
+        requestedUrls.push(request.url);
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderWithProviders(<ModerationPage />);
+    await screen.findByText('Pending review');
+
+    await waitFor(() => {
+      expect(requestedUrls.some((url) => url.includes('status=PUBLISHED') && url.includes('pageSize=100'))).toBe(
+        true,
+      );
+      expect(requestedUrls.some((url) => url.includes('status=REJECTED') && url.includes('pageSize=100'))).toBe(
+        true,
+      );
+    });
+  });
+
+  it('shows a visible error instead of a silent zero when a stat count fails to load', async () => {
+    server.use(
+      http.get(`${API_URL}/moderation/queue`, () => HttpResponse.json([])),
+      http.get(`${API_URL}/items`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get('status') === 'PUBLISHED') {
+          return HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 });
+        }
+        return HttpResponse.json([]);
+      }),
+    );
+
+    renderWithProviders(<ModerationPage />);
+
+    expect(
+      await screen.findByText("Couldn't load full counts for one or more stat cards. Please try again."),
+    ).toBeInTheDocument();
+  });
+
+  it('shows a visible error when the moderation queue itself fails to load', async () => {
+    server.use(
+      http.get(`${API_URL}/moderation/queue`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })),
+      http.get(`${API_URL}/items`, () => HttpResponse.json([])),
+    );
+
+    renderWithProviders(<ModerationPage />);
+
+    expect(await screen.findByText("Couldn't load the moderation queue. Please try again.")).toBeInTheDocument();
+  });
 });

@@ -53,4 +53,20 @@ describe('EditListingPage', () => {
       expect(screen.getByText(/updated/i)).toBeInTheDocument();
     });
   });
+
+  it('shows a visible error message when the item fails to load', async () => {
+    server.use(
+      http.get(`${API_URL}/categories`, () => HttpResponse.json([{ id: 'cat-2', name: 'Furniture' }])),
+      http.get(`${API_URL}/items/item-1`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })),
+    );
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/items/:id/edit" element={<EditListingPage />} />
+      </Routes>,
+      { route: '/items/item-1/edit' },
+    );
+
+    expect(await screen.findByText("Couldn't load this listing. Please try again.")).toBeInTheDocument();
+  });
 });

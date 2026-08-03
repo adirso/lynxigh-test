@@ -8,6 +8,7 @@ export type ItemFilters = {
   condition?: string;
   search?: string;
   status?: ItemStatus;
+  pageSize?: number;
 };
 
 function buildQuery(filters: ItemFilters): string {
@@ -16,6 +17,7 @@ function buildQuery(filters: ItemFilters): string {
   if (filters.condition) params.set('condition', filters.condition);
   if (filters.search) params.set('search', filters.search);
   if (filters.status) params.set('status', filters.status);
+  if (filters.pageSize) params.set('pageSize', String(filters.pageSize));
   const qs = params.toString();
   return qs ? `?${qs}` : '';
 }

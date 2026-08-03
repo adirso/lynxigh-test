@@ -8,7 +8,7 @@ import { renderWithProviders } from './test-utils';
 import NewListingPage from '../src/pages/NewListingPage';
 
 describe('NewListingPage', () => {
-  it('submits the form as multipart and navigates to my-listings on success', async () => {
+  it('submits the form as multipart and shows a success message in place (no navigation)', async () => {
     server.use(
       http.get(`${API_URL}/categories`, () => HttpResponse.json([{ id: 'cat-1', name: 'Electronics' }])),
       http.post(`${API_URL}/items`, () => HttpResponse.json({ id: 'item-9', status: 'PENDING' }, { status: 201 })),
@@ -26,8 +26,13 @@ describe('NewListingPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /submit for review/i }));
 
+    // "submitted" alone also matches the static intro paragraph ("Submitted listings go to
+    // moderation before they appear in the catalog."), which is present on the page before any
+    // submission happens. Assert on "pending moderator review" instead — that phrase only
+    // appears in the post-submission success message, so this actually verifies the mutation
+    // fired and succeeded rather than just that the page rendered.
     await waitFor(() => {
-      expect(screen.getByText(/submitted/i)).toBeInTheDocument();
+      expect(screen.getByText(/pending moderator review/i)).toBeInTheDocument();
     });
   });
 });

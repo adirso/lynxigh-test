@@ -6,12 +6,13 @@ import { ApiError } from '../lib/api-client';
 
 export default function EditListingPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: item, isLoading } = useItem(id!);
+  const { data: item, isLoading, isError } = useItem(id!);
   const updateItem = useUpdateItem();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   if (isLoading) return <p>Loading…</p>;
+  if (isError) return <p className="error-text">Couldn't load this listing. Please try again.</p>;
   if (!item) return <p>Item not found.</p>;
 
   return (

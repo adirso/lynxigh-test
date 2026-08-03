@@ -82,6 +82,10 @@ textarea.input { min-height: 90px; resize: vertical; }
 .seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
 .seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
 .error-text { color: var(--color-accent-2-700); font-size: 13px; margin-top: 4px; }
+/* Visually hides an input without removing it from the tab order — unlike display:none,
+   this keeps the element focusable and operable via keyboard (e.g. Space/Enter on a
+   wrapping label). */
+.visually-hidden-input { position: absolute; opacity: 0; width: 0; height: 0; }
 
 /* cards */
 .card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface); }

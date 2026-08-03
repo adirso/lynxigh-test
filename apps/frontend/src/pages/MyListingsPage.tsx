@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMyItems, useCancelItem } from '../api/items';
+import { ApiError } from '../lib/api-client';
 
 const STATUS_TAG_CLASS: Record<string, string> = {
   PENDING: 'tag-neutral',
@@ -9,14 +11,17 @@ const STATUS_TAG_CLASS: Record<string, string> = {
 };
 
 export default function MyListingsPage() {
-  const { data: items, isLoading } = useMyItems();
+  const { data: items, isLoading, isError } = useMyItems();
   const cancelItem = useCancelItem();
+  const [error, setError] = useState<string | null>(null);
 
   if (isLoading) return <p>Loading…</p>;
+  if (isError) return <p className="error-text">Couldn't load your listings. Please try again.</p>;
 
   return (
     <div>
       <h2>My listings</h2>
+      {error && <p className="error-text">{error}</p>}
       <table className="table">
         <thead>
           <tr>
@@ -40,7 +45,15 @@ export default function MyListingsPage() {
                 </td>
                 <td>
                   {canCancel && (
-                    <button className="btn btn-secondary" onClick={() => cancelItem.mutate(item.id)}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setError(null);
+                        cancelItem.mutate(item.id, {
+                          onError: (err) => setError(err instanceof ApiError ? err.message : 'Something went wrong'),
+                        });
+                      }}
+                    >
                       Cancel
                     </button>
                   )}

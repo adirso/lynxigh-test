@@ -1,19 +1,23 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useItem, useCancelItem, useDeleteItem } from '../api/items';
 import { useCategories } from '../api/categories';
 import { resolvePhotoUrl } from '../lib/resolve-photo-url';
 import { useAuth } from '../auth/useAuth';
+import { ApiError } from '../lib/api-client';
 
 export default function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { data: item, isLoading } = useItem(id!);
+  const { data: item, isLoading, isError } = useItem(id!);
   const { data: categories } = useCategories();
   const { user } = useAuth();
   const cancelItem = useCancelItem();
   const deleteItem = useDeleteItem();
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
 
   if (isLoading) return <p>Loading…</p>;
+  if (isError) return <p className="error-text">Couldn't load this listing. Please try again.</p>;
   if (!item) return <p>Item not found.</p>;
 
   const category = categories?.find((c) => c.id === item.categoryId);
@@ -69,7 +73,15 @@ export default function ItemDetailPage() {
           <p>{item.description}</p>
           <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
             {canCancel && (
-              <button className="btn btn-secondary" onClick={() => cancelItem.mutate(item.id)}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setError(null);
+                  cancelItem.mutate(item.id, {
+                    onError: (err) => setError(err instanceof ApiError ? err.message : 'Something went wrong'),
+                  });
+                }}
+              >
                 Cancel listing
               </button>
             )}
@@ -82,7 +94,11 @@ export default function ItemDetailPage() {
                   className="btn btn-danger"
                   onClick={() => {
                     if (confirm('Delete this listing permanently?')) {
-                      deleteItem.mutate(item.id, { onSuccess: () => navigate('/') });
+                      setError(null);
+                      deleteItem.mutate(item.id, {
+                        onSuccess: () => navigate('/'),
+                        onError: (err) => setError(err instanceof ApiError ? err.message : 'Something went wrong'),
+                      });
                     }
                   }}
                 >
@@ -91,6 +107,7 @@ export default function ItemDetailPage() {
               </>
             )}
           </div>
+          {error && <p className="error-text">{error}</p>}
         </div>
       </div>
     </div>

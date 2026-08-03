@@ -52,4 +52,30 @@ describe('MyListingsPage', () => {
       expect(within(updatedRow).queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument();
     });
   });
+
+  it('shows a visible error message when cancelling fails, instead of doing nothing silently', async () => {
+    // Simulates the concrete failure mode from the review: a moderator rejects the item between
+    // page load and the contributor's Cancel click, and the backend returns a 409 conflict.
+    server.use(
+      http.get(`${API_URL}/items/mine`, () => HttpResponse.json(MINE)),
+      http.patch(`${API_URL}/items/item-1/cancel`, () =>
+        HttpResponse.json({ error: { message: 'Item is no longer cancellable' } }, { status: 409 }),
+      ),
+    );
+    renderWithProviders(<MyListingsPage />);
+    const pendingRow = (await screen.findByText('Pending Item')).closest('tr')!;
+
+    await userEvent.click(within(pendingRow).getByRole('button', { name: /cancel/i }));
+
+    expect(await screen.findByText('Item is no longer cancellable')).toBeInTheDocument();
+  });
+
+  it('shows a visible error message when the listings themselves fail to load', async () => {
+    server.use(
+      http.get(`${API_URL}/items/mine`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })),
+    );
+    renderWithProviders(<MyListingsPage />);
+
+    expect(await screen.findByText("Couldn't load your listings. Please try again.")).toBeInTheDocument();
+  });
 });

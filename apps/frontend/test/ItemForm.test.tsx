@@ -56,4 +56,13 @@ describe('ItemForm', () => {
       }),
     );
   });
+
+  it('shows a visible error message when categories fail to load', async () => {
+    server.use(
+      http.get(`${API_URL}/categories`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })),
+    );
+    renderForm();
+
+    expect(await screen.findByText("Couldn't load categories. Please try again.")).toBeInTheDocument();
+  });
 });

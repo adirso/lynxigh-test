@@ -1,5 +1,3 @@
-import { useRef } from 'react';
-
 export type PickedPhoto = { file: File; previewUrl: string };
 
 export default function PhotoPicker({
@@ -9,8 +7,6 @@ export default function PhotoPicker({
   photos: PickedPhoto[];
   onChange: (photos: PickedPhoto[]) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
   function handleFiles(files: FileList | null) {
     if (!files) return;
     const added = Array.from(files).map((file) => ({ file, previewUrl: URL.createObjectURL(file) }));
@@ -18,6 +14,8 @@ export default function PhotoPicker({
   }
 
   function remove(index: number) {
+    const [removed] = photos.slice(index, index + 1);
+    if (removed) URL.revokeObjectURL(removed.previewUrl);
     onChange(photos.filter((_, i) => i !== index));
   }
 
@@ -42,11 +40,10 @@ export default function PhotoPicker({
         <label className="photo-add">
           <input
             id="photo-input"
-            ref={inputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
             multiple
-            style={{ display: 'none' }}
+            className="visually-hidden-input"
             onChange={(e) => handleFiles(e.target.files)}
           />
           Add photo

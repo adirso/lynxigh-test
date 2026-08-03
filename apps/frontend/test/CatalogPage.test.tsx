@@ -56,4 +56,23 @@ describe('CatalogPage', () => {
       expect(lastUrl).toContain('categoryId=cat-2');
     });
   });
+
+  it('shows a visible error message when the catalog fails to load', async () => {
+    server.use(http.get(`${API_URL}/items`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })));
+
+    renderWithProviders(<CatalogPage />);
+
+    expect(await screen.findByText("Couldn't load the catalog. Please try again.")).toBeInTheDocument();
+  });
+
+  it('shows a visible error message when categories fail to load', async () => {
+    server.use(
+      http.get(`${API_URL}/categories`, () => HttpResponse.json({ error: { message: 'Boom' } }, { status: 500 })),
+      http.get(`${API_URL}/items`, () => HttpResponse.json(ITEMS)),
+    );
+
+    renderWithProviders(<CatalogPage />);
+
+    expect(await screen.findByText("Couldn't load categories. Please try again.")).toBeInTheDocument();
+  });
 });
