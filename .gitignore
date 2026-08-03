@@ -39,3 +39,6 @@ coverage/
 
 # Temporary
 .tmp/
+
+# Internal planning docs (not part of the deliverable)
+docs/superpowers/
