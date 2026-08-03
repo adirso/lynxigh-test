@@ -5,6 +5,7 @@ import { loadEnv } from './env.js';
 import { authRouter } from './auth/auth.routes.js';
 import { categoriesRouter } from './categories/categories.routes.js';
 import { itemsRouter } from './items/items.routes.js';
+import { moderationRouter } from './moderation/moderation.routes.js';
 import { asyncHandler } from './async-handler.js';
 
 export function createApp() {
@@ -22,6 +23,7 @@ export function createApp() {
   app.use('/auth', authRouter);
   app.use('/categories', categoriesRouter);
   app.use('/items', itemsRouter);
+  app.use('/moderation', moderationRouter);
 
   app.use(errorHandler);
 

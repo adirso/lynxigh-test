@@ -1,11 +1,15 @@
 import { Router } from 'express';
 import multer from 'multer';
+import { z } from 'zod';
 import type { ItemStatus } from '@prisma/client';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
 import { createItemBodySchema, updateItemBodySchema } from './items.schemas.js';
 import { createItem, listItems, getItemById, cancelItem, updateItem, deleteItem } from './items.service.js';
+import { approveItem, rejectItem } from '../moderation/moderation.service.js';
 import { ValidationError } from '../errors.js';
+
+const rejectBodySchema = z.object({ reason: z.string().min(1) });
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -106,5 +110,29 @@ itemsRouter.delete(
   asyncHandler(async (req, res) => {
     await deleteItem(req.params.id);
     res.status(204).send();
+  }),
+);
+
+itemsRouter.post(
+  '/:id/approve',
+  requireAuth,
+  requireRole('MODERATOR'),
+  asyncHandler(async (req, res) => {
+    const item = await approveItem(req.params.id, req.user!.id);
+    res.json(item);
+  }),
+);
+
+itemsRouter.post(
+  '/:id/reject',
+  requireAuth,
+  requireRole('MODERATOR'),
+  asyncHandler(async (req, res) => {
+    const parsed = rejectBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0].message);
+    }
+    const item = await rejectItem(req.params.id, req.user!.id, parsed.data.reason);
+    res.json(item);
   }),
 );
