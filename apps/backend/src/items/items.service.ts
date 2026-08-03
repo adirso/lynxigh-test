@@ -5,7 +5,7 @@ import type { UploadedFile } from '../storage/storage-port.js';
 import { loadEnv } from '../env.js';
 import { serializeItem } from './items.serialize.js';
 import type { CreateItemInput } from './items.schemas.js';
-import { NotFoundError } from '../errors.js';
+import { NotFoundError, ForbiddenError, ConflictError } from '../errors.js';
 
 const storage = createStorage(loadEnv());
 
@@ -92,4 +92,30 @@ export async function getItemById(id: string, requester: Requester) {
   }
 
   return serializeItem(item);
+}
+
+export async function cancelItem(id: string, requesterId: string) {
+  const item = await prisma.item.findUnique({ where: { id } });
+  if (!item) {
+    throw new NotFoundError('Item not found');
+  }
+  if (item.contributorId !== requesterId) {
+    throw new ForbiddenError('You can only cancel your own listings');
+  }
+  if (item.status !== 'PENDING' && item.status !== 'PUBLISHED') {
+    throw new ConflictError(`Cannot cancel an item with status ${item.status}`);
+  }
+
+  const updated = await prisma.item.update({
+    where: { id },
+    data: {
+      status: 'CANCELLED',
+      statusEvents: {
+        create: { actorId: requesterId, fromStatus: item.status, toStatus: 'CANCELLED' },
+      },
+    },
+    include: { photos: true },
+  });
+
+  return serializeItem(updated);
 }

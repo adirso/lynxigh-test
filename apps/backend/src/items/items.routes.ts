@@ -4,7 +4,7 @@ import type { ItemStatus } from '@prisma/client';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
 import { createItemBodySchema } from './items.schemas.js';
-import { createItem, listItems, getItemById } from './items.service.js';
+import { createItem, listItems, getItemById, cancelItem } from './items.service.js';
 import { ValidationError } from '../errors.js';
 
 const upload = multer({
@@ -71,6 +71,16 @@ itemsRouter.get(
   attachUserIfPresent,
   asyncHandler(async (req, res) => {
     const item = await getItemById(req.params.id, req.user);
+    res.json(item);
+  }),
+);
+
+itemsRouter.patch(
+  '/:id/cancel',
+  requireAuth,
+  requireRole('CONTRIBUTOR'),
+  asyncHandler(async (req, res) => {
+    const item = await cancelItem(req.params.id, req.user!.id);
     res.json(item);
   }),
 );
