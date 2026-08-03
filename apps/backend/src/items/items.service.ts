@@ -3,13 +3,26 @@ import { prisma } from '../db.js';
 import { createStorage } from '../storage/storage-port.js';
 import type { UploadedFile } from '../storage/storage-port.js';
 import { loadEnv } from '../env.js';
-import { serializeItem } from './items.serialize.js';
+import { serializeItem, serializePrivilegedItem } from './items.serialize.js';
 import type { CreateItemInput, UpdateItemInput } from './items.schemas.js';
-import { NotFoundError, ForbiddenError, ConflictError } from '../errors.js';
+import { NotFoundError, ForbiddenError, ConflictError, ValidationError } from '../errors.js';
 
 const storage = createStorage(loadEnv());
 
+async function assertCategoryExists(categoryId: string): Promise<void> {
+  const category = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!category) {
+    throw new ValidationError('categoryId does not reference an existing category');
+  }
+}
+
 export async function createItem(contributorId: string, input: CreateItemInput, photos: UploadedFile[]) {
+  // Validate the category exists BEFORE writing any photos to disk. Photos
+  // are written via storage.save() ahead of the Prisma create() below; if we
+  // saved them first and only then hit a categoryId FK violation on create,
+  // we'd have already wasted disk writes and left orphaned files behind.
+  await assertCategoryExists(input.categoryId);
+
   const savedUrls = await Promise.all(photos.map((photo) => storage.save(photo)));
 
   const item = await prisma.item.create({
@@ -42,7 +55,8 @@ export async function createItem(contributorId: string, input: CreateItemInput, 
     include: { photos: true },
   });
 
-  return serializeItem(item);
+  // The contributor is always the owner of the item they just created.
+  return serializePrivilegedItem(item);
 }
 
 export type ItemFilters = {
@@ -56,6 +70,12 @@ export type ItemFilters = {
 
 export type Requester = { id: string; role: Role } | undefined;
 
+// Privileged fields (minPrice, aiFlagged, aiFlagReason, aiConfidence) are only
+// ever shown to the item's owner or a moderator — everyone else gets the
+// public projection. Applied per-item here (rather than only in
+// getItemById) so a moderator browsing /items?status=PENDING sees the same
+// AI-flag hints they'd get from the dedicated moderation queue, and so a
+// contributor listing items sees their own minPrice reflected back.
 export async function listItems(filters: ItemFilters, requester: Requester) {
   const isModerator = requester?.role === 'MODERATOR';
   const where: Prisma.ItemWhereInput = {
@@ -76,7 +96,11 @@ export async function listItems(filters: ItemFilters, requester: Requester) {
     take: pageSize,
   });
 
-  return items.map(serializeItem);
+  return items.map((item) =>
+    isModerator || item.contributorId === requester?.id
+      ? serializePrivilegedItem(item)
+      : serializeItem(item),
+  );
 }
 
 export async function getItemById(id: string, requester: Requester) {
@@ -91,7 +115,7 @@ export async function getItemById(id: string, requester: Requester) {
     throw new NotFoundError('Item not found');
   }
 
-  return serializeItem(item);
+  return isOwner || isModerator ? serializePrivilegedItem(item) : serializeItem(item);
 }
 
 export async function cancelItem(id: string, requesterId: string) {
@@ -117,7 +141,8 @@ export async function cancelItem(id: string, requesterId: string) {
     include: { photos: true },
   });
 
-  return serializeItem(updated);
+  // Only the owning contributor can reach this (enforced above).
+  return serializePrivilegedItem(updated);
 }
 
 export async function updateItem(id: string, input: UpdateItemInput) {
@@ -125,6 +150,8 @@ export async function updateItem(id: string, input: UpdateItemInput) {
   if (!existing) {
     throw new NotFoundError('Item not found');
   }
+
+  await assertCategoryExists(input.categoryId);
 
   const updated = await prisma.item.update({
     where: { id },
@@ -141,7 +168,8 @@ export async function updateItem(id: string, input: UpdateItemInput) {
     include: { photos: true },
   });
 
-  return serializeItem(updated);
+  // This route is moderator-only (requireRole('MODERATOR') in items.routes.ts).
+  return serializePrivilegedItem(updated);
 }
 
 export async function deleteItem(id: string) {

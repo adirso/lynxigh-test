@@ -1,27 +1,42 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
-import type { ItemStatus } from '@prisma/client';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
-import { createItemBodySchema, updateItemBodySchema } from './items.schemas.js';
+import { createItemBodySchema, updateItemBodySchema, listItemsQuerySchema } from './items.schemas.js';
 import { createItem, listItems, getItemById, cancelItem, updateItem, deleteItem } from './items.service.js';
 import { approveItem, rejectItem } from '../moderation/moderation.service.js';
 import { ValidationError } from '../errors.js';
+import { isAllowedImageMimeType } from '../storage/mime-types.js';
 
 const rejectBodySchema = z.object({ reason: z.string().min(1) });
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!isAllowedImageMimeType(file.mimetype)) {
+      cb(new ValidationError('Only JPEG, PNG, WEBP, and GIF photos are allowed'));
+      return;
+    }
+    cb(null, true);
+  },
 });
 
 export const itemsRouter = Router();
 
 function parseMultipartBody(body: Record<string, string>) {
+  let options: unknown = [];
+  if (body.options) {
+    try {
+      options = JSON.parse(body.options);
+    } catch {
+      throw new ValidationError('options must be valid JSON');
+    }
+  }
   return {
     ...body,
-    options: body.options ? JSON.parse(body.options) : [],
+    options,
   };
 }
 
@@ -54,18 +69,11 @@ itemsRouter.get(
   '/',
   attachUserIfPresent,
   asyncHandler(async (req, res) => {
-    const { status, categoryId, condition, search, page, pageSize } = req.query;
-    const items = await listItems(
-      {
-        status: typeof status === 'string' ? (status as ItemStatus) : undefined,
-        categoryId: typeof categoryId === 'string' ? categoryId : undefined,
-        condition: typeof condition === 'string' ? condition : undefined,
-        search: typeof search === 'string' ? search : undefined,
-        page: page ? Number(page) : undefined,
-        pageSize: pageSize ? Number(pageSize) : undefined,
-      },
-      req.user,
-    );
+    const parsed = listItemsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0].message);
+    }
+    const items = await listItems(parsed.data, req.user);
     res.json(items);
   }),
 );

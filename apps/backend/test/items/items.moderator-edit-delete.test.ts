@@ -85,6 +85,28 @@ describe('PUT /items/:id and DELETE /items/:id (moderator)', () => {
     expect(found).toBeNull();
   });
 
+  it('rejects updating an item to reference a nonexistent categoryId with 400', async () => {
+    const { token: contributorToken } = await registerAndLogin(app, 'CONTRIBUTOR');
+    const { token: modToken } = await registerAndLogin(app, 'MODERATOR');
+    const category = await prisma.category.findFirstOrThrow();
+    const item = await createItem(contributorToken, category.id);
+
+    const res = await request(app)
+      .put(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${modToken}`)
+      .send({
+        title: 'Corrected Title',
+        description: 'Corrected description.',
+        price: 40,
+        condition: 'Fair',
+        isNegotiable: false,
+        categoryId: '00000000-0000-0000-0000-000000000000',
+        options: [],
+      });
+
+    expect(res.status).toBe(400);
+  });
+
   it('returns 404 when editing a non-existent item', async () => {
     const { token: modToken } = await registerAndLogin(app, 'MODERATOR');
     const category = await prisma.category.findFirstOrThrow();

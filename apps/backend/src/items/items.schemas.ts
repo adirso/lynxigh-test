@@ -24,3 +24,16 @@ export type CreateItemInput = z.infer<typeof createItemBodySchema>;
 
 export const updateItemBodySchema = createItemBodySchema;
 export type UpdateItemInput = z.infer<typeof updateItemBodySchema>;
+
+const ITEM_STATUSES = ['PENDING', 'PUBLISHED', 'REJECTED', 'CANCELLED'] as const;
+
+export const listItemsQuerySchema = z.object({
+  status: z.enum(ITEM_STATUSES).optional(),
+  categoryId: z.string().optional(),
+  condition: z.string().optional(),
+  search: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export type ListItemsQuery = z.infer<typeof listItemsQuerySchema>;

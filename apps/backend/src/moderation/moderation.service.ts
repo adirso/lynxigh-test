@@ -1,5 +1,5 @@
 import { prisma } from '../db.js';
-import { serializeItem } from '../items/items.serialize.js';
+import { serializePrivilegedItem } from '../items/items.serialize.js';
 import { NotFoundError, ConflictError } from '../errors.js';
 
 export async function getQueue() {
@@ -8,7 +8,7 @@ export async function getQueue() {
     include: { photos: true },
     orderBy: { createdAt: 'asc' },
   });
-  return items.map(serializeItem);
+  return items.map(serializePrivilegedItem);
 }
 
 export async function approveItem(id: string, moderatorId: string) {
@@ -33,7 +33,7 @@ export async function approveItem(id: string, moderatorId: string) {
     include: { photos: true },
   });
 
-  return serializeItem(updated);
+  return serializePrivilegedItem(updated);
 }
 
 export async function rejectItem(id: string, moderatorId: string, reason: string) {
@@ -59,5 +59,5 @@ export async function rejectItem(id: string, moderatorId: string, reason: string
     include: { photos: true },
   });
 
-  return serializeItem(updated);
+  return serializePrivilegedItem(updated);
 }

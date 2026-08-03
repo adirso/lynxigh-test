@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import { resetDb } from '../helpers/db-reset.js';
+import { prisma } from '../../src/db.js';
+import { hashPassword } from '../../src/auth/password.js';
 
 const app = createApp();
 
@@ -13,7 +15,6 @@ describe('POST /auth/register', () => {
       email: 'jordan@example.com',
       password: 'super-secret-1',
       name: 'Jordan',
-      role: 'CONTRIBUTOR',
     });
 
     expect(res.status).toBe(201);
@@ -31,29 +32,49 @@ describe('POST /auth/register', () => {
       email: 'dup@example.com',
       password: 'super-secret-1',
       name: 'First',
-      role: 'CONTRIBUTOR',
     });
 
     const res = await request(app).post('/auth/register').send({
       email: 'dup@example.com',
       password: 'another-secret',
       name: 'Second',
-      role: 'MODERATOR',
     });
 
     expect(res.status).toBe(409);
+  });
+
+  it('CRITICAL: ignores a client-supplied role and always creates a CONTRIBUTOR account, even if the body claims MODERATOR', async () => {
+    const res = await request(app).post('/auth/register').send({
+      email: 'attacker@example.com',
+      password: 'super-secret-1',
+      name: 'Attacker',
+      role: 'MODERATOR',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.role).toBe('CONTRIBUTOR');
+
+    const dbUser = await prisma.user.findUniqueOrThrow({ where: { email: 'attacker@example.com' } });
+    expect(dbUser.role).toBe('CONTRIBUTOR');
+
+    // The minted token must also carry CONTRIBUTOR, not the requested role.
+    const meRes = await request(app)
+      .get('/moderation/queue')
+      .set('Authorization', `Bearer ${res.body.token}`);
+    expect(meRes.status).toBe(403);
   });
 });
 
 describe('POST /auth/login', () => {
   beforeEach(resetDb);
 
-  it('logs in with correct credentials', async () => {
-    await request(app).post('/auth/register').send({
-      email: 'morgan@example.com',
-      password: 'super-secret-1',
-      name: 'Morgan',
-      role: 'MODERATOR',
+  it('logs in with correct credentials and returns the account role from the DB', async () => {
+    // Moderator accounts are provisioned out-of-band (never via public
+    // register) — create one directly to prove login round-trips a
+    // MODERATOR role correctly.
+    const passwordHash = await hashPassword('super-secret-1');
+    await prisma.user.create({
+      data: { email: 'morgan@example.com', passwordHash, name: 'Morgan', role: 'MODERATOR' },
     });
 
     const res = await request(app).post('/auth/login').send({
@@ -71,7 +92,6 @@ describe('POST /auth/login', () => {
       email: 'morgan2@example.com',
       password: 'super-secret-1',
       name: 'Morgan',
-      role: 'MODERATOR',
     });
 
     const res = await request(app).post('/auth/login').send({

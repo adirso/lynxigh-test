@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import multer from 'multer';
 import { errorHandler } from '../src/middleware/error-handler.js';
 import { NotFoundError, ValidationError } from '../src/errors.js';
 
@@ -37,5 +38,52 @@ describe('errorHandler', () => {
     const res = await request(app).get('/boom');
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: { message: 'Internal server error' } });
+  });
+
+  it('converts a MulterError (e.g. file too large) to a clean 400 instead of a 500', async () => {
+    const app = appWithRoute(() => {
+      throw new multer.MulterError('LIMIT_FILE_SIZE');
+    });
+    const res = await request(app).get('/boom');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: { message: 'Invalid request' } });
+  });
+
+  it('honors an upstream 4xx status already set on a plain error (e.g. body-parser JSON SyntaxError) instead of forcing a 500', async () => {
+    const app = appWithRoute(() => {
+      const err = new SyntaxError('Unexpected token in JSON') as SyntaxError & { status: number; expose: boolean };
+      err.status = 400;
+      err.expose = true;
+      throw err;
+    });
+    const res = await request(app).get('/boom');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: { message: 'Invalid request' } });
+  });
+
+  it('does not honor a bogus non-4xx statusCode and still falls back to 500', async () => {
+    const app = appWithRoute(() => {
+      const err = new Error('weird upstream error') as Error & { statusCode: number };
+      err.statusCode = 599;
+      throw err;
+    });
+    const res = await request(app).get('/boom');
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: { message: 'Internal server error' } });
+  });
+
+  it('returns 400 for a real malformed JSON request body via express.json()', async () => {
+    const jsonApp = express();
+    jsonApp.use(express.json());
+    jsonApp.post('/echo', (req, res) => res.json({ ok: true, body: req.body }));
+    jsonApp.use(errorHandler);
+
+    const res = await request(jsonApp)
+      .post('/echo')
+      .set('Content-Type', 'application/json')
+      .send('{not valid json');
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: { message: 'Invalid request' } });
   });
 });

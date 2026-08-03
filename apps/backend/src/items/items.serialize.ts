@@ -1,8 +1,15 @@
 import type { Item, ItemPhoto } from '@prisma/client';
 
-export type ItemDto = ReturnType<typeof serializeItem>;
+type SerializableItem = Item & { photos?: ItemPhoto[] };
 
-export function serializeItem(item: Item & { photos?: ItemPhoto[] }) {
+function serializePhotos(item: SerializableItem) {
+  return (item.photos ?? [])
+    .slice()
+    .sort((a, b) => a.position - b.position)
+    .map((p) => ({ id: p.id, url: p.url, position: p.position, isPrimary: p.isPrimary }));
+}
+
+function serializeBase(item: SerializableItem) {
   return {
     id: item.id,
     title: item.title,
@@ -10,7 +17,6 @@ export function serializeItem(item: Item & { photos?: ItemPhoto[] }) {
     price: item.price.toNumber(),
     condition: item.condition,
     isNegotiable: item.isNegotiable,
-    minPrice: item.minPrice ? item.minPrice.toNumber() : null,
     categoryId: item.categoryId,
     options: item.options,
     contributorId: item.contributorId,
@@ -18,13 +24,37 @@ export function serializeItem(item: Item & { photos?: ItemPhoto[] }) {
     reviewedById: item.reviewedById,
     reviewedAt: item.reviewedAt,
     rejectionReason: item.rejectionReason,
-    aiFlagged: item.aiFlagged,
-    aiFlagReason: item.aiFlagReason,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
-    photos: (item.photos ?? [])
-      .slice()
-      .sort((a, b) => a.position - b.position)
-      .map((p) => ({ id: p.id, url: p.url, position: p.position, isPrimary: p.isPrimary })),
+    photos: serializePhotos(item),
+  };
+}
+
+export type ItemDto = ReturnType<typeof serializeItem>;
+export type PrivilegedItemDto = ReturnType<typeof serializePrivilegedItem>;
+
+/**
+ * Public projection — safe to return to anonymous browsers and to
+ * contributors viewing items they don't own. Deliberately omits:
+ *  - minPrice: the contributor's private negotiation floor
+ *  - aiFlagged / aiFlagReason / aiConfidence: moderator-only screening hints
+ */
+export function serializeItem(item: SerializableItem) {
+  return serializeBase(item);
+}
+
+/**
+ * Privileged projection — for the item's owner (contributor) or a moderator
+ * only. Adds the fields the public projection hides. Callers are responsible
+ * for the authorization check (isOwner || isModerator) before choosing this
+ * over serializeItem.
+ */
+export function serializePrivilegedItem(item: SerializableItem) {
+  return {
+    ...serializeBase(item),
+    minPrice: item.minPrice ? item.minPrice.toNumber() : null,
+    aiFlagged: item.aiFlagged,
+    aiFlagReason: item.aiFlagReason,
+    aiConfidence: item.aiConfidence ? item.aiConfidence.toNumber() : null,
   };
 }

@@ -4,11 +4,14 @@ import { asyncHandler } from '../async-handler.js';
 import { register, login } from './auth.service.js';
 import { ValidationError } from '../errors.js';
 
+// Public self-registration only ever creates CONTRIBUTOR accounts. `role` is
+// intentionally NOT accepted here — accepting a client-supplied role would let
+// anyone mint a MODERATOR token and bypass every access control in the app.
+// MODERATOR accounts are provisioned out-of-band (see prisma/seed.ts).
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   name: z.string().min(1),
-  role: z.enum(['CONTRIBUTOR', 'MODERATOR']),
 });
 
 const loginSchema = z.object({

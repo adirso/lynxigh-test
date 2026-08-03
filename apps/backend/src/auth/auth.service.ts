@@ -2,21 +2,23 @@ import { prisma } from '../db.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { signAccessToken } from './jwt.js';
 import { ConflictError, UnauthorizedError } from '../errors.js';
-import type { Role } from '@prisma/client';
 
-export async function register(input: { email: string; password: string; name: string; role: Role }) {
+export async function register(input: { email: string; password: string; name: string }) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw new ConflictError('An account with this email already exists');
   }
 
   const passwordHash = await hashPassword(input.password);
+  // Public registration always creates a CONTRIBUTOR — never trust a
+  // client-supplied role here. MODERATOR accounts are provisioned out-of-band
+  // (see prisma/seed.ts for demo moderator credentials).
   const user = await prisma.user.create({
     data: {
       email: input.email,
       passwordHash,
       name: input.name,
-      role: input.role,
+      role: 'CONTRIBUTOR',
     },
   });
 

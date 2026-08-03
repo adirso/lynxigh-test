@@ -26,6 +26,29 @@ describe('LocalDiskStorage', () => {
     expect(existsSync(savedPath)).toBe(true);
   });
 
+  it('derives the file extension from the mime type, not the client-supplied filename', async () => {
+    const storage = new LocalDiskStorage(TEST_DIR);
+    const url = await storage.save({
+      buffer: Buffer.from('fake-image-bytes'),
+      originalName: 'malicious.html',
+      mimeType: 'image/png',
+    });
+
+    expect(url).toMatch(/\.png$/);
+    expect(url).not.toMatch(/\.html$/);
+  });
+
+  it('falls back to a generic, inert extension for an unrecognized mime type', async () => {
+    const storage = new LocalDiskStorage(TEST_DIR);
+    const url = await storage.save({
+      buffer: Buffer.from('whatever'),
+      originalName: 'file.exe',
+      mimeType: 'application/x-msdownload',
+    });
+
+    expect(url).toMatch(/\.bin$/);
+  });
+
   it('deletes a previously saved file', async () => {
     const storage = new LocalDiskStorage(TEST_DIR);
     const url = await storage.save({

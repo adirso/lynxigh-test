@@ -84,6 +84,94 @@ describe('GET /items and GET /items/:id', () => {
     expect(res.body.id).toBe(item.id);
   });
 
+  it('rejects a bogus ?status= value with 400 instead of a 500', async () => {
+    const res = await request(app).get('/items?status=NOT_A_REAL_STATUS');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a non-numeric ?page= value with 400 instead of a 500', async () => {
+    const res = await request(app).get('/items?page=banana');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects ?page=0 with 400 instead of a 500', async () => {
+    const res = await request(app).get('/items?page=0');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a negative ?page= with 400 instead of a 500', async () => {
+    const res = await request(app).get('/items?page=-1');
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects a non-numeric ?pageSize= value with 400 instead of a 500', async () => {
+    const res = await request(app).get('/items?pageSize=banana');
+    expect(res.status).toBe(400);
+  });
+
+  it('hides minPrice and AI moderation fields from anonymous and non-owner viewers, but shows them to the owner and a moderator', async () => {
+    const { token: ownerToken } = await registerAndLogin(app, 'CONTRIBUTOR');
+    const { token: otherToken } = await registerAndLogin(app, 'CONTRIBUTOR');
+    const { token: modToken } = await registerAndLogin(app, 'MODERATOR');
+    const category = await prisma.category.findFirstOrThrow();
+
+    const createRes = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .field('title', 'Negotiable Item')
+      .field('description', 'Open to offers.')
+      .field('price', '100')
+      .field('condition', 'Good')
+      .field('isNegotiable', 'true')
+      .field('minPrice', '70')
+      .field('categoryId', category.id)
+      .field('options', JSON.stringify([]))
+      .attach('photos', Buffer.from('fake-image-bytes'), 'item.jpg');
+
+    const itemId = createRes.body.id;
+    await prisma.item.update({
+      where: { id: itemId },
+      data: { status: 'PUBLISHED', aiFlagged: true, aiFlagReason: 'Possible counterfeit', aiConfidence: 0.82 },
+    });
+
+    const anonRes = await request(app).get(`/items/${itemId}`);
+    expect(anonRes.status).toBe(200);
+    expect(anonRes.body.minPrice).toBeUndefined();
+    expect(anonRes.body.aiFlagged).toBeUndefined();
+    expect(anonRes.body.aiFlagReason).toBeUndefined();
+    expect(anonRes.body.aiConfidence).toBeUndefined();
+
+    const otherRes = await request(app).get(`/items/${itemId}`).set('Authorization', `Bearer ${otherToken}`);
+    expect(otherRes.status).toBe(200);
+    expect(otherRes.body.minPrice).toBeUndefined();
+    expect(otherRes.body.aiFlagged).toBeUndefined();
+
+    const ownerRes = await request(app).get(`/items/${itemId}`).set('Authorization', `Bearer ${ownerToken}`);
+    expect(ownerRes.status).toBe(200);
+    expect(ownerRes.body.minPrice).toBe(70);
+    expect(ownerRes.body.aiFlagged).toBe(true);
+    expect(ownerRes.body.aiFlagReason).toBe('Possible counterfeit');
+    expect(ownerRes.body.aiConfidence).toBe(0.82);
+
+    const modRes = await request(app).get(`/items/${itemId}`).set('Authorization', `Bearer ${modToken}`);
+    expect(modRes.status).toBe(200);
+    expect(modRes.body.minPrice).toBe(70);
+    expect(modRes.body.aiFlagged).toBe(true);
+    expect(modRes.body.aiFlagReason).toBe('Possible counterfeit');
+    expect(modRes.body.aiConfidence).toBe(0.82);
+
+    // Same privilege check applies to the list endpoint.
+    const anonListRes = await request(app).get('/items');
+    const anonListItem = anonListRes.body.find((i: { id: string }) => i.id === itemId);
+    expect(anonListItem.minPrice).toBeUndefined();
+
+    const modListRes = await request(app)
+      .get('/items?status=PUBLISHED')
+      .set('Authorization', `Bearer ${modToken}`);
+    const modListItem = modListRes.body.find((i: { id: string }) => i.id === itemId);
+    expect(modListItem.minPrice).toBe(70);
+  });
+
   it('filters the public list by category', async () => {
     const { token } = await registerAndLogin(app, 'CONTRIBUTOR');
     const categories = await prisma.category.findMany();
