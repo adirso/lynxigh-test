@@ -9,6 +9,7 @@ export class ApiError extends Error {
 }
 
 const TOKEN_KEY = 'reloop_token';
+const USER_KEY = 'reloop_user';
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -17,6 +18,12 @@ export function getStoredToken(): string | null {
 export function setStoredToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Clears both the token and the persisted user, e.g. on a forced logout (401) or explicit logout. */
+export function clearStoredSession() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
 }
 
 type ApiClientOptions = RequestInit & { skipAuthRedirect?: boolean };
@@ -31,7 +38,7 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
 
   if (res.status === 401 && !options.skipAuthRedirect) {
-    setStoredToken(null);
+    clearStoredSession();
     window.location.assign('/login');
     throw new ApiError(401, 'Unauthorized');
   }
@@ -45,4 +52,4 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
   return res.json();
 }
 
-export { API_URL };
+export { API_URL, USER_KEY };

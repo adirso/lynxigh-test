@@ -1,10 +1,8 @@
 import { createContext, useState, type ReactNode } from 'react';
 import type { User } from '../types/models';
-import { getStoredToken, setStoredToken } from '../lib/api-client';
+import { getStoredToken, setStoredToken, clearStoredSession, USER_KEY } from '../lib/api-client';
 
 type StoredSession = { token: string; user: User };
-
-const USER_KEY = 'reloop_user';
 
 function loadStoredUser(): User | null {
   const raw = localStorage.getItem(USER_KEY);
@@ -32,8 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
-    setStoredToken(null);
-    localStorage.removeItem(USER_KEY);
+    clearStoredSession();
     setToken(null);
     setUser(null);
   }
