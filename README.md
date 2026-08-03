@@ -11,6 +11,9 @@ an account.
 - **Auth:** JWT (stateless)
 - **Monorepo:** pnpm workspaces (`apps/backend`, `apps/frontend`)
 
+See [TECH_STACK.md](./TECH_STACK.md) for the reasoning behind these choices
+and the alternatives considered.
+
 ## Prerequisites
 
 - Node.js 20+
