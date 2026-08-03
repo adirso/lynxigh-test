@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import multer from 'multer';
+import type { ItemStatus } from '@prisma/client';
 import { asyncHandler } from '../async-handler.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
 import { createItemBodySchema } from './items.schemas.js';
-import { createItem } from './items.service.js';
+import { createItem, listItems, getItemById } from './items.service.js';
 import { ValidationError } from '../errors.js';
 
 const upload = multer({
@@ -42,5 +43,34 @@ itemsRouter.post(
       files.map((f) => ({ buffer: f.buffer, originalName: f.originalname, mimeType: f.mimetype })),
     );
     res.status(201).json(item);
+  }),
+);
+
+itemsRouter.get(
+  '/',
+  attachUserIfPresent,
+  asyncHandler(async (req, res) => {
+    const { status, categoryId, condition, search, page, pageSize } = req.query;
+    const items = await listItems(
+      {
+        status: typeof status === 'string' ? (status as ItemStatus) : undefined,
+        categoryId: typeof categoryId === 'string' ? categoryId : undefined,
+        condition: typeof condition === 'string' ? condition : undefined,
+        search: typeof search === 'string' ? search : undefined,
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined,
+      },
+      req.user,
+    );
+    res.json(items);
+  }),
+);
+
+itemsRouter.get(
+  '/:id',
+  attachUserIfPresent,
+  asyncHandler(async (req, res) => {
+    const item = await getItemById(req.params.id, req.user);
+    res.json(item);
   }),
 );

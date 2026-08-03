@@ -1,9 +1,11 @@
+import type { Role, ItemStatus, Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { createStorage } from '../storage/storage-port.js';
 import type { UploadedFile } from '../storage/storage-port.js';
 import { loadEnv } from '../env.js';
 import { serializeItem } from './items.serialize.js';
 import type { CreateItemInput } from './items.schemas.js';
+import { NotFoundError } from '../errors.js';
 
 const storage = createStorage(loadEnv());
 
@@ -39,6 +41,55 @@ export async function createItem(contributorId: string, input: CreateItemInput, 
     },
     include: { photos: true },
   });
+
+  return serializeItem(item);
+}
+
+export type ItemFilters = {
+  status?: ItemStatus;
+  categoryId?: string;
+  condition?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type Requester = { id: string; role: Role } | undefined;
+
+export async function listItems(filters: ItemFilters, requester: Requester) {
+  const isModerator = requester?.role === 'MODERATOR';
+  const where: Prisma.ItemWhereInput = {
+    status: isModerator && filters.status ? filters.status : 'PUBLISHED',
+    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+    ...(filters.condition ? { condition: filters.condition } : {}),
+    ...(filters.search ? { title: { contains: filters.search, mode: 'insensitive' } } : {}),
+  };
+
+  const page = filters.page ?? 1;
+  const pageSize = filters.pageSize ?? 24;
+
+  const items = await prisma.item.findMany({
+    where,
+    include: { photos: true },
+    orderBy: { createdAt: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+  });
+
+  return items.map(serializeItem);
+}
+
+export async function getItemById(id: string, requester: Requester) {
+  const item = await prisma.item.findUnique({ where: { id }, include: { photos: true } });
+  if (!item) {
+    throw new NotFoundError('Item not found');
+  }
+
+  const isOwner = requester?.id === item.contributorId;
+  const isModerator = requester?.role === 'MODERATOR';
+  if (item.status !== 'PUBLISHED' && !isOwner && !isModerator) {
+    throw new NotFoundError('Item not found');
+  }
 
   return serializeItem(item);
 }
