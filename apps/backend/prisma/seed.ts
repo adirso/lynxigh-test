@@ -57,7 +57,13 @@ export async function seedModerators() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   seedCategories()
-    .then(() => seedModerators())
+    .then(async () => {
+      if (process.env.NODE_ENV === 'production') {
+        console.log('Skipping demo moderator seed in production');
+      } else {
+        await seedModerators();
+      }
+    })
     .then(() => prisma.$disconnect())
     .catch(async (err) => {
       console.error(err);
