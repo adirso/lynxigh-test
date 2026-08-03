@@ -1,0 +1,101 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CONTRIBUTOR
+  MODERATOR
+}
+
+enum ItemStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  contributedItems Item[]        @relation("ContributedItems")
+  reviewedItems    Item[]        @relation("ReviewedItems")
+  statusEvents     StatusEvent[]
+
+  @@map("users")
+}
+
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  items Item[]
+
+  @@map("categories")
+}
+
+model Item {
+  id              String     @id @default(uuid())
+  title           String
+  description     String
+  price           Decimal    @db.Decimal(10, 2)
+  condition       String
+  isNegotiable    Boolean    @default(false)
+  minPrice        Decimal?   @db.Decimal(10, 2)
+  categoryId      String
+  category        Category   @relation(fields: [categoryId], references: [id])
+  options         String[]
+  contributorId   String
+  contributor     User       @relation("ContributedItems", fields: [contributorId], references: [id])
+  status          ItemStatus @default(PENDING)
+  reviewedById    String?
+  reviewedBy      User?      @relation("ReviewedItems", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  rejectionReason String?
+  aiFlagged       Boolean    @default(false)
+  aiFlagReason    String?
+  aiConfidence    Decimal?   @db.Decimal(4, 3)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  photos       ItemPhoto[]
+  statusEvents StatusEvent[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@map("items")
+}
+
+model ItemPhoto {
+  id        String   @id @default(uuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  url       String
+  position  Int
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("item_photos")
+}
+
+model StatusEvent {
+  id         String   @id @default(uuid())
+  itemId     String
+  item       Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  fromStatus String?
+  toStatus   String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@map("status_events")
+}
