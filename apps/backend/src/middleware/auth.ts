@@ -13,13 +13,14 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
   if (!token) {
     throw new UnauthorizedError('Missing bearer token');
   }
+  let payload;
   try {
-    const payload = verifyAccessToken(token);
-    req.user = { id: payload.sub, role: payload.role };
-    next();
+    payload = verifyAccessToken(token);
   } catch {
     throw new UnauthorizedError('Invalid or expired token');
   }
+  req.user = { id: payload.sub, role: payload.role };
+  next();
 };
 
 export function requireRole(role: Role): RequestHandler {

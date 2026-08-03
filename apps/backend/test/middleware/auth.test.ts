@@ -62,4 +62,24 @@ describe('attachUserIfPresent', () => {
     expect(req.user).toEqual({ id: 'user-2', role: 'CONTRIBUTOR' });
     expect(next).toHaveBeenCalledOnce();
   });
+
+  it('leaves req.user undefined and calls next when an invalid token is present', () => {
+    const { req, res, next } = mockReqRes({ authorization: 'Bearer garbage-token' });
+    attachUserIfPresent(req, res, next);
+    expect(req.user).toBeUndefined();
+    expect(next).toHaveBeenCalledOnce();
+  });
+});
+
+describe('middleware chaining', () => {
+  it('requireAuth followed by requireRole chains correctly and throws 403 for wrong role', () => {
+    const token = signAccessToken({ sub: 'user-1', role: 'CONTRIBUTOR' });
+    const { req, res, next } = mockReqRes({ authorization: `Bearer ${token}` });
+
+    requireAuth(req, res, () => {
+      expect(() => requireRole('MODERATOR')(req, res, next)).toThrow(
+        expect.objectContaining({ statusCode: 403 }),
+      );
+    });
+  });
 });
