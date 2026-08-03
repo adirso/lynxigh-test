@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import CatalogPage from './pages/CatalogPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import NewListingPage from './pages/NewListingPage';
+import MyListingsPage from './pages/MyListingsPage';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/items/:id" element={<ItemDetailPage />} />
           <Route element={<ProtectedRoute role="CONTRIBUTOR" />}>
             <Route path="/listings/new" element={<NewListingPage />} />
+            <Route path="/my-listings" element={<MyListingsPage />} />
           </Route>
           <Route element={<ProtectedRoute role="MODERATOR" />}>{/* moderator routes added in later tasks */}</Route>
         </Route>

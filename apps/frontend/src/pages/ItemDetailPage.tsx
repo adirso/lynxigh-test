@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useItem } from '../api/items';
+import { useItem, useCancelItem } from '../api/items';
 import { useCategories } from '../api/categories';
 import { resolvePhotoUrl } from '../lib/resolve-photo-url';
 import { useAuth } from '../auth/useAuth';
@@ -9,6 +9,7 @@ export default function ItemDetailPage() {
   const { data: item, isLoading } = useItem(id!);
   const { data: categories } = useCategories();
   const { user } = useAuth();
+  const cancelItem = useCancelItem();
 
   if (isLoading) return <p>Loading…</p>;
   if (!item) return <p>Item not found.</p>;
@@ -65,7 +66,11 @@ export default function ItemDetailPage() {
           </div>
           <p>{item.description}</p>
           <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-4)' }}>
-            {canCancel && <button className="btn btn-secondary">Cancel listing</button>}
+            {canCancel && (
+              <button className="btn btn-secondary" onClick={() => cancelItem.mutate(item.id)}>
+                Cancel listing
+              </button>
+            )}
             {isModerator && (
               <>
                 <Link to={`/items/${item.id}/edit`} className="btn btn-secondary">

@@ -60,3 +60,24 @@ export function useCreateItem() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['items'] }),
   });
 }
+
+export function useMyItems() {
+  return useQuery({
+    queryKey: ['items', 'mine'],
+    queryFn: () => apiClient<Item[]>('/items/mine'),
+  });
+}
+
+export function cancelItem(id: string) {
+  return apiClient<Item>(`/items/${id}/cancel`, { method: 'PATCH' });
+}
+
+export function useCancelItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+}
