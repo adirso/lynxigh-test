@@ -9,7 +9,7 @@ export type AccessTokenPayload = {
 
 export function signAccessToken(payload: AccessTokenPayload): string {
   const env = loadEnv();
-  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
+  return jwt.sign(payload, env.jwtSecret, { expiresIn: env.jwtExpiresIn } as jwt.SignOptions);
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
