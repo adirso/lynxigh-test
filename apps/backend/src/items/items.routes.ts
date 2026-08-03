@@ -3,8 +3,8 @@ import multer from 'multer';
 import type { ItemStatus } from '@prisma/client';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
-import { createItemBodySchema } from './items.schemas.js';
-import { createItem, listItems, getItemById, cancelItem } from './items.service.js';
+import { createItemBodySchema, updateItemBodySchema } from './items.schemas.js';
+import { createItem, listItems, getItemById, cancelItem, updateItem, deleteItem } from './items.service.js';
 import { ValidationError } from '../errors.js';
 
 const upload = multer({
@@ -82,5 +82,29 @@ itemsRouter.patch(
   asyncHandler(async (req, res) => {
     const item = await cancelItem(req.params.id, req.user!.id);
     res.json(item);
+  }),
+);
+
+itemsRouter.put(
+  '/:id',
+  requireAuth,
+  requireRole('MODERATOR'),
+  asyncHandler(async (req, res) => {
+    const parsed = updateItemBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.issues[0].message);
+    }
+    const item = await updateItem(req.params.id, parsed.data);
+    res.json(item);
+  }),
+);
+
+itemsRouter.delete(
+  '/:id',
+  requireAuth,
+  requireRole('MODERATOR'),
+  asyncHandler(async (req, res) => {
+    await deleteItem(req.params.id);
+    res.status(204).send();
   }),
 );

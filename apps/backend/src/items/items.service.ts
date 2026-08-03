@@ -4,7 +4,7 @@ import { createStorage } from '../storage/storage-port.js';
 import type { UploadedFile } from '../storage/storage-port.js';
 import { loadEnv } from '../env.js';
 import { serializeItem } from './items.serialize.js';
-import type { CreateItemInput } from './items.schemas.js';
+import type { CreateItemInput, UpdateItemInput } from './items.schemas.js';
 import { NotFoundError, ForbiddenError, ConflictError } from '../errors.js';
 
 const storage = createStorage(loadEnv());
@@ -118,4 +118,38 @@ export async function cancelItem(id: string, requesterId: string) {
   });
 
   return serializeItem(updated);
+}
+
+export async function updateItem(id: string, input: UpdateItemInput) {
+  const existing = await prisma.item.findUnique({ where: { id } });
+  if (!existing) {
+    throw new NotFoundError('Item not found');
+  }
+
+  const updated = await prisma.item.update({
+    where: { id },
+    data: {
+      title: input.title,
+      description: input.description,
+      price: input.price,
+      condition: input.condition,
+      isNegotiable: input.isNegotiable,
+      minPrice: input.minPrice ?? null,
+      categoryId: input.categoryId,
+      options: input.options,
+    },
+    include: { photos: true },
+  });
+
+  return serializeItem(updated);
+}
+
+export async function deleteItem(id: string) {
+  const item = await prisma.item.findUnique({ where: { id }, include: { photos: true } });
+  if (!item) {
+    throw new NotFoundError('Item not found');
+  }
+
+  await Promise.all(item.photos.map((photo) => storage.delete(photo.url)));
+  await prisma.item.delete({ where: { id } });
 }
