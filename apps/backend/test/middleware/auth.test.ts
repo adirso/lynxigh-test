@@ -1,7 +1,22 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Request, Response } from 'express';
 import { requireAuth, requireRole, attachUserIfPresent } from '../../src/middleware/auth.js';
 import { signAccessToken } from '../../src/auth/jwt.js';
+
+const originalEnv = process.env;
+
+beforeEach(() => {
+  process.env = {
+    ...originalEnv,
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-secret-key-for-jwt',
+    JWT_EXPIRES_IN: '1h',
+  };
+});
+
+afterEach(() => {
+  process.env = originalEnv;
+});
 
 function mockReqRes(headers: Record<string, string> = {}) {
   const req = { headers } as unknown as Request;
