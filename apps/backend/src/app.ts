@@ -1,13 +1,9 @@
-import express, { type RequestHandler } from 'express';
+import express from 'express';
 import cors from 'cors';
 import { errorHandler } from './middleware/error-handler.js';
 import { loadEnv } from './env.js';
-
-export function asyncHandler(fn: RequestHandler): RequestHandler {
-  return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
+import { authRouter } from './auth/auth.routes.js';
+import { asyncHandler } from './async-handler.js';
 
 export function createApp() {
   const app = express();
@@ -20,6 +16,8 @@ export function createApp() {
   app.get('/health', asyncHandler((_req, res) => {
     res.json({ status: 'ok' });
   }));
+
+  app.use('/auth', authRouter);
 
   app.use(errorHandler);
 
