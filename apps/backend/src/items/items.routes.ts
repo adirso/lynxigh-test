@@ -4,7 +4,15 @@ import { z } from 'zod';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole, attachUserIfPresent } from '../middleware/auth.js';
 import { createItemBodySchema, updateItemBodySchema, listItemsQuerySchema } from './items.schemas.js';
-import { createItem, listItems, getItemById, cancelItem, updateItem, deleteItem } from './items.service.js';
+import {
+  createItem,
+  listItems,
+  listMyItems,
+  getItemById,
+  cancelItem,
+  updateItem,
+  deleteItem,
+} from './items.service.js';
 import { approveItem, rejectItem } from '../moderation/moderation.service.js';
 import { ValidationError } from '../errors.js';
 import { isAllowedImageMimeType } from '../storage/mime-types.js';
@@ -74,6 +82,18 @@ itemsRouter.get(
       throw new ValidationError(parsed.error.issues[0].message);
     }
     const items = await listItems(parsed.data, req.user);
+    res.json(items);
+  }),
+);
+
+// Must be registered before GET /:id — Express matches routes in order, and
+// /:id would otherwise capture the literal path "mine" as an item id.
+itemsRouter.get(
+  '/mine',
+  requireAuth,
+  requireRole('CONTRIBUTOR'),
+  asyncHandler(async (req, res) => {
+    const items = await listMyItems(req.user!.id);
     res.json(items);
   }),
 );

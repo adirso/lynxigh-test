@@ -103,6 +103,19 @@ export async function listItems(filters: ItemFilters, requester: Requester) {
   );
 }
 
+// Lists a contributor's own items across every status (PENDING, PUBLISHED,
+// REJECTED, CANCELLED, ...) so they can find and cancel listings that never
+// made it to the public /items feed. Always the privileged projection since
+// the caller is always the owner here.
+export async function listMyItems(contributorId: string) {
+  const items = await prisma.item.findMany({
+    where: { contributorId },
+    include: { photos: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  return items.map((item) => serializePrivilegedItem(item));
+}
+
 export async function getItemById(id: string, requester: Requester) {
   const item = await prisma.item.findUnique({ where: { id }, include: { photos: true } });
   if (!item) {
