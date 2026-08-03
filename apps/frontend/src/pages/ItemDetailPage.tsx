@@ -1,5 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
-import { useItem, useCancelItem } from '../api/items';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useItem, useCancelItem, useDeleteItem } from '../api/items';
 import { useCategories } from '../api/categories';
 import { resolvePhotoUrl } from '../lib/resolve-photo-url';
 import { useAuth } from '../auth/useAuth';
@@ -10,6 +10,8 @@ export default function ItemDetailPage() {
   const { data: categories } = useCategories();
   const { user } = useAuth();
   const cancelItem = useCancelItem();
+  const deleteItem = useDeleteItem();
+  const navigate = useNavigate();
 
   if (isLoading) return <p>Loading…</p>;
   if (!item) return <p>Item not found.</p>;
@@ -76,7 +78,16 @@ export default function ItemDetailPage() {
                 <Link to={`/items/${item.id}/edit`} className="btn btn-secondary">
                   Edit
                 </Link>
-                <button className="btn btn-danger">Delete</button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    if (confirm('Delete this listing permanently?')) {
+                      deleteItem.mutate(item.id, { onSuccess: () => navigate('/') });
+                    }
+                  }}
+                >
+                  Delete
+                </button>
               </>
             )}
           </div>

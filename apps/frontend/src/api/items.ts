@@ -68,6 +68,44 @@ export function useMyItems() {
   });
 }
 
+type UpdateItemInput = {
+  title: string;
+  description: string;
+  price: number;
+  condition: string;
+  isNegotiable: boolean;
+  minPrice?: number;
+  categoryId: string;
+  options: string[];
+};
+
+export function updateItem(id: string, values: UpdateItemInput) {
+  return apiClient<Item>(`/items/${id}`, { method: 'PUT', body: JSON.stringify(values) });
+}
+
+export function useUpdateItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, values }: { id: string; values: UpdateItemInput }) => updateItem(id, values),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      queryClient.invalidateQueries({ queryKey: ['items', 'detail', variables.id] });
+    },
+  });
+}
+
+export function deleteItem(id: string) {
+  return apiClient<void>(`/items/${id}`, { method: 'DELETE' });
+}
+
+export function useDeleteItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteItem,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['items'] }),
+  });
+}
+
 export function cancelItem(id: string) {
   return apiClient<Item>(`/items/${id}/cancel`, { method: 'PATCH' });
 }

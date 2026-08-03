@@ -7,6 +7,7 @@ import CatalogPage from './pages/CatalogPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import NewListingPage from './pages/NewListingPage';
 import MyListingsPage from './pages/MyListingsPage';
+import EditListingPage from './pages/EditListingPage';
 
 export default function App() {
   return (
@@ -21,7 +22,9 @@ export default function App() {
             <Route path="/listings/new" element={<NewListingPage />} />
             <Route path="/my-listings" element={<MyListingsPage />} />
           </Route>
-          <Route element={<ProtectedRoute role="MODERATOR" />}>{/* moderator routes added in later tasks */}</Route>
+          <Route element={<ProtectedRoute role="MODERATOR" />}>
+            <Route path="/items/:id/edit" element={<EditListingPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
