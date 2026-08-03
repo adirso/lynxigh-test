@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useModerationQueue, useApproveItem, useRejectItem } from '../api/moderation';
 import { useItems } from '../api/items';
+import { ApiError } from '../lib/api-client';
 
 export default function ModerationPage() {
   const { data: queue, isLoading } = useModerationQueue();
@@ -11,6 +12,7 @@ export default function ModerationPage() {
   const rejectItem = useRejectItem();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   if (isLoading) return <p>Loading…</p>;
 
@@ -49,10 +51,24 @@ export default function ModerationPage() {
               <td>${item.price}</td>
               <td>
                 <div className="row-actions">
-                  <button className="btn btn-icon" title="Approve" onClick={() => approveItem.mutate(item.id)}>
+                  <button
+                    className="btn btn-icon"
+                    title="Approve"
+                    aria-label="Approve"
+                    onClick={() => approveItem.mutate(item.id)}
+                  >
                     ✓
                   </button>
-                  <button className="btn btn-icon" title="Reject" onClick={() => setRejectingId(item.id)}>
+                  <button
+                    className="btn btn-icon"
+                    title="Reject"
+                    aria-label="Reject"
+                    onClick={() => {
+                      setRejectingId(item.id);
+                      setReason('');
+                      setError(null);
+                    }}
+                  >
                     ✕
                   </button>
                 </div>
@@ -68,15 +84,22 @@ export default function ModerationPage() {
                     <button
                       className="btn btn-secondary"
                       style={{ marginTop: 'var(--space-2)' }}
+                      disabled={reason.trim() === '' || rejectItem.isPending}
                       onClick={() => {
+                        if (!reason.trim()) return;
+                        setError(null);
                         rejectItem.mutate(
                           { id: item.id, reason },
-                          { onSuccess: () => { setRejectingId(null); setReason(''); } },
+                          {
+                            onSuccess: () => { setRejectingId(null); setReason(''); },
+                            onError: (err) => setError(err instanceof ApiError ? err.message : 'Something went wrong'),
+                          },
                         );
                       }}
                     >
                       Confirm reject
                     </button>
+                    {error && <p className="error-text">{error}</p>}
                   </div>
                 )}
               </td>

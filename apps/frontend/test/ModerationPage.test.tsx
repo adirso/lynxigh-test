@@ -30,11 +30,10 @@ describe('ModerationPage', () => {
     renderWithProviders(<ModerationPage />);
 
     const row = (await screen.findByText('Canon EF 50mm Lens')).closest('tr')!;
-    // The approve/reject buttons are icon-only (their visible text is the ✓/✕ glyph, which is
-    // also their accessible name — the `title` attribute only supplies a tooltip and does not
-    // override an accessible name derived from text content). Target them by title instead of
-    // by accessible name.
-    await userEvent.click(within(row).getByTitle(/approve/i));
+    // The approve/reject buttons are icon-only (visible text is the ✓/✕ glyph). An `aria-label`
+    // gives them a real accessible name ("Approve"/"Reject") independent of that glyph and of the
+    // `title` tooltip, so this can target them by role + accessible name.
+    await userEvent.click(within(row).getByRole('button', { name: /approve/i }));
 
     await waitFor(() => {
       expect(screen.queryByText('Canon EF 50mm Lens')).not.toBeInTheDocument();
@@ -54,12 +53,58 @@ describe('ModerationPage', () => {
 
     renderWithProviders(<ModerationPage />);
     const row = (await screen.findByText('Canon EF 50mm Lens')).closest('tr')!;
-    await userEvent.click(within(row).getByTitle(/reject/i));
+    await userEvent.click(within(row).getByRole('button', { name: /reject/i }));
     await userEvent.type(screen.getByLabelText(/reason/i), 'Photos too blurry');
     await userEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
 
     await waitFor(() => {
       expect(rejectedBody).toEqual({ reason: 'Photos too blurry' });
     });
+  });
+
+  it('blocks a reject submission when the reason is empty or whitespace-only', async () => {
+    let rejectCalled = false;
+    server.use(
+      http.get(`${API_URL}/moderation/queue`, () => HttpResponse.json(QUEUE)),
+      http.get(`${API_URL}/items`, () => HttpResponse.json([])),
+      http.post(`${API_URL}/items/item-1/reject`, () => {
+        rejectCalled = true;
+        return HttpResponse.json({ ...QUEUE[0], status: 'REJECTED' });
+      }),
+    );
+
+    renderWithProviders(<ModerationPage />);
+    const row = (await screen.findByText('Canon EF 50mm Lens')).closest('tr')!;
+    await userEvent.click(within(row).getByRole('button', { name: /reject/i }));
+
+    const confirmButton = screen.getByRole('button', { name: /confirm reject/i });
+    expect(confirmButton).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(/reason/i), '   ');
+    expect(confirmButton).toBeDisabled();
+
+    // A disabled button ignores clicks, but assert directly on the network call too so this
+    // test still catches a regression if the disabled guard is ever removed without the
+    // underlying handler being fixed to no-op on an empty reason.
+    await userEvent.click(confirmButton);
+    expect(rejectCalled).toBe(false);
+  });
+
+  it('shows a visible error message when the reject request fails, instead of failing silently', async () => {
+    server.use(
+      http.get(`${API_URL}/moderation/queue`, () => HttpResponse.json(QUEUE)),
+      http.get(`${API_URL}/items`, () => HttpResponse.json([])),
+      http.post(`${API_URL}/items/item-1/reject`, () =>
+        HttpResponse.json({ error: { message: 'Reason required' } }, { status: 400 }),
+      ),
+    );
+
+    renderWithProviders(<ModerationPage />);
+    const row = (await screen.findByText('Canon EF 50mm Lens')).closest('tr')!;
+    await userEvent.click(within(row).getByRole('button', { name: /reject/i }));
+    await userEvent.type(screen.getByLabelText(/reason/i), 'Photos too blurry');
+    await userEvent.click(screen.getByRole('button', { name: /confirm reject/i }));
+
+    expect(await screen.findByText('Reason required')).toBeInTheDocument();
   });
 });
