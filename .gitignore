@@ -42,3 +42,7 @@ coverage/
 
 # Internal planning docs (not part of the deliverable)
 docs/superpowers/
+
+# Internal working state (SDD workspaces, deploy secrets: SSH keys, DB
+# passwords, JWT secrets) — never belongs in the repo
+.superpowers/
