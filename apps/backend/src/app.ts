@@ -8,6 +8,7 @@ import { categoriesRouter } from './categories/categories.routes.js';
 import { itemsRouter } from './items/items.routes.js';
 import { moderationRouter } from './moderation/moderation.routes.js';
 import { adminRouter } from './admin/admin.routes.js';
+import { aiRouter } from './ai/ai.routes.js';
 import { asyncHandler } from './async-handler.js';
 import { ALLOWED_IMAGE_MIME_TYPES } from './storage/mime-types.js';
 
@@ -49,6 +50,7 @@ export function createApp() {
   app.use('/items', itemsRouter);
   app.use('/moderation', moderationRouter);
   app.use('/admin', adminRouter);
+  app.use('/ai', aiRouter);
 
   app.use(errorHandler);
 
