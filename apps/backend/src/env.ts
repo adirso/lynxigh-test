@@ -7,6 +7,8 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('1d'),
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   UPLOADS_DIR: z.string().default('./uploads'),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().default('gpt-4o-mini'),
 });
 
 export type Env = {
@@ -16,6 +18,8 @@ export type Env = {
   jwtExpiresIn: string;
   storageDriver: 'local' | 's3';
   uploadsDir: string;
+  openaiApiKey?: string;
+  openaiModel: string;
 };
 
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
@@ -27,5 +31,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     jwtExpiresIn: parsed.JWT_EXPIRES_IN,
     storageDriver: parsed.STORAGE_DRIVER,
     uploadsDir: parsed.UPLOADS_DIR,
+    openaiApiKey: parsed.OPENAI_API_KEY,
+    openaiModel: parsed.OPENAI_MODEL,
   };
 }

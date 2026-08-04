@@ -3,7 +3,7 @@ import request from 'supertest';
 import express from 'express';
 import multer from 'multer';
 import { errorHandler } from '../src/middleware/error-handler.js';
-import { NotFoundError, ValidationError } from '../src/errors.js';
+import { NotFoundError, ValidationError, ServiceUnavailableError, BadGatewayError } from '../src/errors.js';
 
 function appWithRoute(handler: express.RequestHandler) {
   const app = express();
@@ -85,5 +85,23 @@ describe('errorHandler', () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ error: { message: 'Invalid request' } });
+  });
+
+  it('converts a ServiceUnavailableError to 503', async () => {
+    const app = appWithRoute(() => {
+      throw new ServiceUnavailableError('AI description generation is not configured');
+    });
+    const res = await request(app).get('/boom');
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: { message: 'AI description generation is not configured' } });
+  });
+
+  it('converts a BadGatewayError to 502', async () => {
+    const app = appWithRoute(() => {
+      throw new BadGatewayError('AI description generation failed');
+    });
+    const res = await request(app).get('/boom');
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({ error: { message: 'AI description generation failed' } });
   });
 });
