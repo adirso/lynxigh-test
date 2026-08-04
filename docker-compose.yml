@@ -30,6 +30,8 @@ services:
       JWT_EXPIRES_IN: 1d
       STORAGE_DRIVER: local
       UPLOADS_DIR: ./uploads
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
     ports:
       - "4000:4000"
     volumes:

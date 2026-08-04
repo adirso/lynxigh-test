@@ -66,6 +66,12 @@ the backend/frontend directly on the host instead (see below) — that's the
 faster edit loop; the Docker setup is meant for "run the whole thing
 cleanly" rather than day-to-day iteration.
 
+**Enabling AI-generated descriptions:** copy the root `.env.example` to `.env`
+(`cp .env.example .env`) and fill in `OPENAI_API_KEY` before running
+`pnpm docker:up` — Docker Compose reads the repo-root `.env` file
+automatically. Without it, the app runs normally; the "Generate with AI"
+button on the New Listing form just doesn't appear.
+
 ## Running locally without Docker (faster edit loop, hot-reload)
 
 ## 1. Install dependencies
@@ -104,6 +110,8 @@ Docker Compose setup above — no edits needed for local development.
 | `JWT_EXPIRES_IN` | `1d` | Access token lifetime |
 | `STORAGE_DRIVER` | `local` | Photo storage backend (`local` disk for dev; an `s3` driver is planned) |
 | `UPLOADS_DIR` | `./uploads` | Where uploaded photos are written when `STORAGE_DRIVER=local` |
+| `OPENAI_API_KEY` | _(empty)_ | Enables the "Generate with AI" listing description button (optional) — get a key at platform.openai.com; the app works normally without one, the button just doesn't appear |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model used for description generation |
 
 | Variable (frontend) | Default | Purpose |
 |---|---|---|
@@ -158,6 +166,9 @@ Vite prints the local URL (typically `http://localhost:5173`).
 - Browse the public catalog — no account needed.
 - Sign up as a contributor, create a listing (with at least one photo) — it
   enters moderation as `pending`.
+- On the New Listing form, after picking at least one photo, click
+  "Generate with AI" to draft a description from the photo(s) — only shown
+  when `OPENAI_API_KEY` is configured.
 - Log in as a demo moderator to see the moderation queue and
   approve/reject/edit/delete listings.
 
@@ -246,8 +257,9 @@ docker-compose.yml    # postgres + backend + frontend, all three
 This covers the core backend + frontend, and running the full stack locally
 via Docker. Not yet built:
 
-- AI-assisted features (e.g. drafting listing descriptions from photos,
-  moderation screening)
+- Further AI-assisted features beyond description generation — e.g.
+  suggesting a price or category, or helping moderators screen for
+  prohibited/low-quality listings
 - Deployment to AWS (the Docker images this repo builds are the starting
   point — this is about running them on EC2/ECS with RDS + S3, not building
   them)
