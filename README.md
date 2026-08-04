@@ -18,7 +18,55 @@ and the alternatives considered.
 
 - Node.js 20+
 - [pnpm](https://pnpm.io) 9+
-- Docker (for the local Postgres instance)
+- Docker
+
+## Running everything with Docker (recommended for just trying it out)
+
+The whole stack — Postgres, backend, frontend — runs via Docker Compose,
+with persistent data across restarts.
+
+```bash
+pnpm docker:up          # builds images and starts postgres + backend + frontend
+pnpm docker:seed        # categories + demo moderator accounts (safe to re-run)
+```
+
+- Frontend: **http://localhost:5173**
+- Backend: **http://localhost:4000**
+- Postgres: `localhost:5433` (mapped from the container's `5432`)
+
+Demo moderator login:
+
+| Email | Password |
+|---|---|
+| `moderator@reloop.dev` | `moderator-demo-pw-1` |
+| `moderator2@reloop.dev` | `moderator-demo-pw-1` |
+
+Other commands:
+
+```bash
+pnpm docker:down          # stop and remove containers — data persists (named volumes)
+pnpm docker:restart       # down + up, no reseed — same data as before
+pnpm docker:restart:seed  # down + up, then reseed (categories/moderators; safe — never touches items/users you created)
+pnpm docker:logs          # follow logs from all three services
+```
+
+**Data persistence:** Postgres data and uploaded photos live in named Docker
+volumes (`postgres_data`, `backend_uploads`), not in the containers
+themselves — killing, stopping, or recreating containers (`docker:down`,
+`docker:restart`, a crash, `docker compose down`) never loses data. The only
+way to actually wipe it is `docker compose down -v` (removes the volumes
+too) or `docker volume rm`.
+
+**Rebuilding after code changes:** this setup copies source into the image
+at build time rather than bind-mounting it (simpler, no dev/prod drift), so
+there's no hot-reload — after changing backend/frontend code, run
+`pnpm docker:up` again (it rebuilds automatically, `docker compose` only
+rebuilds layers that changed). For active development with hot-reload, run
+the backend/frontend directly on the host instead (see below) — that's the
+faster edit loop; the Docker setup is meant for "run the whole thing
+cleanly" rather than day-to-day iteration.
+
+## Running locally without Docker (faster edit loop, hot-reload)
 
 ## 1. Install dependencies
 
@@ -128,8 +176,9 @@ table.
 **psql**, connecting to the Dockerized Postgres directly:
 
 ```bash
-docker exec -it <postgres-container-name> psql -U postgres -d reloop
+docker exec -it lynxigh-postgres-1 psql -U postgres -d reloop
 ```
+(container name depends on how you started Postgres — `docker compose ps` shows the actual name if this doesn't match.)
 
 **Any GUI client** (TablePlus, DBeaver, Postico, etc.) — connect with:
 - Host: `localhost`
@@ -179,6 +228,7 @@ apps/
       middleware/      # auth guards, error handling
       storage/        # photo storage abstraction (local disk; S3 planned)
     test/             # Vitest + Supertest integration tests
+    Dockerfile        # builds, generates the Prisma client, migrates on start
   frontend/
     src/
       api/            # TanStack Query hooks per backend resource
@@ -187,13 +237,17 @@ apps/
       pages/           # one file per route
       styles/         # global design-system CSS
     test/             # Vitest + React Testing Library + MSW
-docker-compose.yml    # local Postgres
+    Dockerfile        # multi-stage build -> static assets served via `serve`
+docker-compose.yml    # postgres + backend + frontend, all three
 ```
 
 ## Roadmap
 
-This covers the core backend + frontend. Not yet built:
+This covers the core backend + frontend, and running the full stack locally
+via Docker. Not yet built:
 
 - AI-assisted features (e.g. drafting listing descriptions from photos,
   moderation screening)
-- Dockerized deployment to AWS
+- Deployment to AWS (the Docker images this repo builds are the starting
+  point — this is about running them on EC2/ECS with RDS + S3, not building
+  them)

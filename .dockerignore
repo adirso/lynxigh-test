@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+.git
+.claude
+.superpowers
+**/dist
+**/build
+**/uploads
+**/.env
+**/.env.*
+!**/.env.example
+*.tsbuildinfo
+coverage
+.DS_Store

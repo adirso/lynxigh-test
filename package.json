@@ -1,5 +1,13 @@
 {
   "name": "reloop-marketplace",
   "private": true,
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:restart": "docker compose down && docker compose up -d --build",
+    "docker:seed": "docker compose run --rm backend sh -c \"npx prisma migrate deploy && pnpm prisma:seed\"",
+    "docker:restart:seed": "pnpm docker:restart && pnpm docker:seed",
+    "docker:logs": "docker compose logs -f"
+  }
 }
