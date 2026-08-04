@@ -10,13 +10,13 @@ import { ValidationError } from '../errors.js';
 // anyone mint a MODERATOR token and bypass every access control in the app.
 // MODERATOR accounts are provisioned out-of-band (see prisma/seed.ts).
 const registerSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8),
   name: z.string().min(1),
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
 

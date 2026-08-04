@@ -43,6 +43,23 @@ describe('POST /auth/register', () => {
     expect(res.status).toBe(409);
   });
 
+  it('stores the email lowercased and treats different casings as duplicates', async () => {
+    const res = await request(app).post('/auth/register').send({
+      email: '  Dup2@Example.com  ',
+      password: 'super-secret-1',
+      name: 'First',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.user.email).toBe('dup2@example.com');
+
+    const dup = await request(app).post('/auth/register').send({
+      email: 'DUP2@EXAMPLE.COM',
+      password: 'another-secret',
+      name: 'Second',
+    });
+    expect(dup.status).toBe(409);
+  });
+
   it('CRITICAL: ignores a client-supplied role and always creates a CONTRIBUTOR account, even if the body claims MODERATOR', async () => {
     const res = await request(app).post('/auth/register').send({
       email: 'attacker@example.com',
@@ -85,6 +102,22 @@ describe('POST /auth/login', () => {
     expect(res.status).toBe(200);
     expect(res.body.token).toEqual(expect.any(String));
     expect(res.body.user.role).toBe('MODERATOR');
+  });
+
+  it('logs in successfully when the email casing differs from how the account was registered', async () => {
+    await request(app).post('/auth/register').send({
+      email: 'casey@example.com',
+      password: 'super-secret-1',
+      name: 'Casey',
+    });
+
+    const res = await request(app).post('/auth/login').send({
+      email: '  Casey@Example.com  ',
+      password: 'super-secret-1',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe('casey@example.com');
   });
 
   it('rejects the wrong password with 401', async () => {
