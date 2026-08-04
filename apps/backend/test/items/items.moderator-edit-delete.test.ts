@@ -49,6 +49,32 @@ describe('PUT /items/:id and DELETE /items/:id (moderator)', () => {
     expect(res.body.price).toBe(40);
   });
 
+  it('records a before/after audit event when a moderator edits an item', async () => {
+    const { token: contributorToken } = await registerAndLogin(app, 'CONTRIBUTOR');
+    const { token: modToken, user: moderator } = await registerAndLogin(app, 'MODERATOR');
+    const category = await prisma.category.findFirstOrThrow();
+    const item = await createItem(contributorToken, category.id);
+
+    await request(app)
+      .put(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${modToken}`)
+      .send({
+        title: 'Corrected Title',
+        description: 'Corrected description.',
+        price: 40,
+        condition: 'Fair',
+        isNegotiable: false,
+        categoryId: category.id,
+        options: ['Local pickup'],
+      });
+
+    const edits = await prisma.itemEdit.findMany({ where: { itemId: item.id } });
+    expect(edits).toHaveLength(1);
+    expect(edits[0].actorId).toBe(moderator.id);
+    expect(edits[0].before).toMatchObject({ title: 'Editable Item', price: 30 });
+    expect(edits[0].after).toMatchObject({ title: 'Corrected Title', price: 40 });
+  });
+
   it('rejects a contributor trying to edit an item', async () => {
     const { token: contributorToken } = await registerAndLogin(app, 'CONTRIBUTOR');
     const category = await prisma.category.findFirstOrThrow();

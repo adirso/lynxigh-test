@@ -126,7 +126,7 @@ itemsRouter.put(
     if (!parsed.success) {
       throw new ValidationError(parsed.error.issues[0].message);
     }
-    const item = await updateItem(req.params.id, parsed.data);
+    const item = await updateItem(req.params.id, parsed.data, req.user!.id);
     res.json(item);
   }),
 );

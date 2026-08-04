@@ -9,6 +9,8 @@ import NewListingPage from './pages/NewListingPage';
 import MyListingsPage from './pages/MyListingsPage';
 import EditListingPage from './pages/EditListingPage';
 import ModerationPage from './pages/ModerationPage';
+import CategoriesAdminPage from './pages/CategoriesAdminPage';
+import AuditLogPage from './pages/AuditLogPage';
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
           <Route element={<ProtectedRoute role="MODERATOR" />}>
             <Route path="/items/:id/edit" element={<EditListingPage />} />
             <Route path="/moderation" element={<ModerationPage />} />
+            <Route path="/admin/categories" element={<CategoriesAdminPage />} />
+            <Route path="/admin/audit-log" element={<AuditLogPage />} />
           </Route>
         </Route>
       </Routes>

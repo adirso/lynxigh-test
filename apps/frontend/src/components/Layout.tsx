@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 
 export default function Layout() {
@@ -10,14 +10,22 @@ export default function Layout() {
         <Link to="/" className="nav-brand">
           Reloop
         </Link>
-        <Link to="/">Browse</Link>
+        <NavLink to="/" end>
+          Browse
+        </NavLink>
         {user?.role === 'CONTRIBUTOR' && (
           <>
-            <Link to="/listings/new">New listing</Link>
-            <Link to="/my-listings">My listings</Link>
+            <NavLink to="/listings/new">New listing</NavLink>
+            <NavLink to="/my-listings">My listings</NavLink>
           </>
         )}
-        {user?.role === 'MODERATOR' && <Link to="/moderation">Moderation queue</Link>}
+        {user?.role === 'MODERATOR' && (
+          <>
+            <NavLink to="/moderation">Moderation queue</NavLink>
+            <NavLink to="/admin/categories">Categories</NavLink>
+            <NavLink to="/admin/audit-log">Audit log</NavLink>
+          </>
+        )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
           {user ? (
             <>

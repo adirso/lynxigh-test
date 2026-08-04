@@ -159,13 +159,48 @@ export async function cancelItem(id: string, requesterId: string) {
   return serializePrivilegedItem(updated);
 }
 
-export async function updateItem(id: string, input: UpdateItemInput) {
+// The editable fields, snapshotted before and after an update for the audit
+// log — deliberately narrower than the full row (no id/status/timestamps),
+// so the log reads as "what a moderator changed", not a full row dump.
+type EditableSnapshot = {
+  title: string;
+  description: string;
+  price: number;
+  condition: string;
+  isNegotiable: boolean;
+  minPrice: number | null;
+  categoryId: string;
+  options: string[];
+};
+
+export async function updateItem(id: string, input: UpdateItemInput, actorId: string) {
   const existing = await prisma.item.findUnique({ where: { id } });
   if (!existing) {
     throw new NotFoundError('Item not found');
   }
 
   await assertCategoryExists(input.categoryId);
+
+  const before: EditableSnapshot = {
+    title: existing.title,
+    description: existing.description,
+    price: existing.price.toNumber(),
+    condition: existing.condition,
+    isNegotiable: existing.isNegotiable,
+    minPrice: existing.minPrice ? existing.minPrice.toNumber() : null,
+    categoryId: existing.categoryId,
+    options: existing.options,
+  };
+  const after: EditableSnapshot = {
+    title: input.title,
+    description: input.description,
+    price: input.price,
+    condition: input.condition,
+    isNegotiable: input.isNegotiable,
+    minPrice: input.minPrice ?? null,
+    categoryId: input.categoryId,
+    options: input.options,
+  };
 
   const updated = await prisma.item.update({
     where: { id },
@@ -178,6 +213,9 @@ export async function updateItem(id: string, input: UpdateItemInput) {
       minPrice: input.minPrice ?? null,
       categoryId: input.categoryId,
       options: input.options,
+      edits: {
+        create: { actorId, before, after },
+      },
     },
     include: { photos: true },
   });

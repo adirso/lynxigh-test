@@ -25,6 +25,7 @@ model User {
   contributedItems Item[]        @relation("ContributedItems")
   reviewedItems    Item[]        @relation("ReviewedItems")
   statusEvents     StatusEvent[]
+  itemEdits        ItemEdit[]
 
   @@map("users")
 }
@@ -63,6 +64,7 @@ model Item {
 
   photos       ItemPhoto[]
   statusEvents StatusEvent[]
+  edits        ItemEdit[]
 
   @@index([status])
   @@index([categoryId])
@@ -93,4 +95,24 @@ model StatusEvent {
   createdAt  DateTime @default(now())
 
   @@map("status_events")
+}
+
+// Content-change audit trail for moderator edits (PUT /items/:id). Distinct
+// from StatusEvent, which only records lifecycle transitions — edits don't
+// change status, so they wouldn't fit that table's fromStatus/toStatus shape.
+// `before`/`after` snapshot just the editable fields (title, description,
+// price, condition, isNegotiable, minPrice, categoryId, options), not the
+// full row, so the admin audit log can show exactly what changed.
+model ItemEdit {
+  id        String   @id @default(uuid())
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  before    Json
+  after     Json
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@map("item_edits")
 }

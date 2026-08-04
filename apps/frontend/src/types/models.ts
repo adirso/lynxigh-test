@@ -43,3 +43,39 @@ export type Item = {
   updatedAt: string;
   photos: ItemPhoto[];
 };
+
+type EditableItemSnapshot = {
+  title: string;
+  description: string;
+  price: number;
+  condition: string;
+  isNegotiable: boolean;
+  minPrice: number | null;
+  categoryId: string;
+  options: string[];
+};
+
+export type AuditLogEntry =
+  | {
+      type: 'STATUS_CHANGE';
+      id: string;
+      itemId: string;
+      itemTitle: string;
+      actorId: string | null;
+      actorName: string | null;
+      fromStatus: ItemStatus | null;
+      toStatus: ItemStatus;
+      reason: string | null;
+      createdAt: string;
+    }
+  | {
+      type: 'EDIT';
+      id: string;
+      itemId: string;
+      itemTitle: string;
+      actorId: string | null;
+      actorName: string | null;
+      before: EditableItemSnapshot;
+      after: EditableItemSnapshot;
+      createdAt: string;
+    };
