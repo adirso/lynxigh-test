@@ -251,19 +251,3 @@ apps/
     Dockerfile        # multi-stage build -> static assets served via `serve`
 docker-compose.yml    # postgres + backend + frontend, all three
 ```
-
-## Roadmap
-
-This covers the core backend + frontend, and running the full stack locally
-via Docker. Not yet built:
-
-- Further AI-assisted features beyond description generation — e.g.
-  suggesting a price or category, or helping moderators screen for
-  prohibited/low-quality listings
-- Rate limiting / abuse protection on the AI description endpoint (any
-  registered contributor can call it freely today — fine for this
-  assignment's scope, but a production deployment would need it, since
-  each call spends real OpenAI API budget)
-- Deployment to AWS (the Docker images this repo builds are the starting
-  point — this is about running them on EC2/ECS with RDS + S3, not building
-  them)
