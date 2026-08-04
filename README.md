@@ -4,6 +4,24 @@ A marketplace catalog web app: contributors submit item listings, moderators
 curate what gets published, and anyone can browse the public catalog without
 an account.
 
+## Live Demo
+
+Deployed on AWS — EC2 (Docker Compose, `docker-compose.prod.yml`) + a managed
+RDS Postgres instance:
+
+- **App:** http://3.218.251.242/
+- **API:** http://3.218.251.242:4000/
+
+Demo moderator login:
+
+| Email | Password |
+|---|---|
+| `moderator@reloop.dev` | `moderator-demo-pw-1` |
+
+This is a single free-tier EC2 instance kept up for review purposes — it may
+be taken down afterward. See "Running everything with Docker" below to run
+it yourself.
+
 ## Tech Stack
 
 - **Backend:** Node.js, Express, TypeScript, Prisma, PostgreSQL
