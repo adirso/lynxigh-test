@@ -113,6 +113,36 @@ Vite prints the local URL (typically `http://localhost:5173`).
 - Log in as a demo moderator to see the moderation queue and
   approve/reject/edit/delete listings.
 
+## Viewing the database
+
+**Prisma Studio** (browser GUI, easiest option):
+
+```bash
+cd apps/backend
+npx prisma studio
+```
+
+Opens at `http://localhost:5555` with a browsable/editable view of every
+table.
+
+**psql**, connecting to the Dockerized Postgres directly:
+
+```bash
+docker exec -it <postgres-container-name> psql -U postgres -d reloop
+```
+
+**Any GUI client** (TablePlus, DBeaver, Postico, etc.) — connect with:
+- Host: `localhost`
+- Port: `5433`
+- User / Password: `postgres` / `postgres`
+- Database: `reloop`
+
+> Running the backend test suite (`pnpm test`) resets the `users`/`items`
+> tables against whatever database `DATABASE_URL` points at — dev and tests
+> share one local Postgres instance. If your data disappears after running
+> tests, re-run `pnpm prisma:seed` to restore the categories and demo
+> moderator accounts.
+
 ## Running tests
 
 **Backend** (from `apps/backend`, requires Postgres running):
