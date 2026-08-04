@@ -1,0 +1,42 @@
+# Production overlay for running on a single EC2 host. Differs from
+# docker-compose.yml in three ways: no local `postgres` service (the PDF
+# requires a managed database — this points at RDS instead via
+# DATABASE_URL), the frontend is published on host port 80 instead of 5173
+# (a plain http://<ip>/ URL for reviewers), and every environment-specific
+# value (DB connection string, JWT secret, API keys, public URL) comes from
+# a .env file created on the host at deploy time rather than being committed
+# here.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    environment:
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 1d
+      STORAGE_DRIVER: local
+      UPLOADS_DIR: ./uploads
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    ports:
+      - "4000:4000"
+    volumes:
+      - backend_uploads:/app/apps/backend/uploads
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    ports:
+      - "80:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_uploads:
