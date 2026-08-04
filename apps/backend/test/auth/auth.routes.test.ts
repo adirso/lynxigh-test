@@ -102,3 +102,50 @@ describe('POST /auth/login', () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe('GET /auth/me', () => {
+  beforeEach(resetDb);
+
+  it("returns the caller's current details from the DB, not just the token payload", async () => {
+    const registerRes = await request(app).post('/auth/register').send({
+      email: 'me@example.com',
+      password: 'super-secret-1',
+      name: 'Original Name',
+    });
+    const token = registerRes.body.token as string;
+
+    // Change the name directly in the DB, independent of anything the token
+    // knows about — /me must reflect this, not the stale value from login.
+    await prisma.user.update({ where: { email: 'me@example.com' }, data: { name: 'Updated Name' } });
+
+    const res = await request(app).get('/auth/me').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      email: 'me@example.com',
+      name: 'Updated Name',
+      role: 'CONTRIBUTOR',
+    });
+    expect(res.body.passwordHash).toBeUndefined();
+  });
+
+  it('rejects an unauthenticated request with 401', async () => {
+    const res = await request(app).get('/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 when the token's user no longer exists in the DB", async () => {
+    const registerRes = await request(app).post('/auth/register').send({
+      email: 'gone@example.com',
+      password: 'super-secret-1',
+      name: 'Gone Soon',
+    });
+    const token = registerRes.body.token as string;
+
+    await prisma.user.delete({ where: { email: 'gone@example.com' } });
+
+    const res = await request(app).get('/auth/me').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(401);
+  });
+});

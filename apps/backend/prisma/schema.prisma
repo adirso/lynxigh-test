@@ -7,11 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  CONTRIBUTOR
-  MODERATOR
-}
-
 enum ItemStatus {
   PENDING
   PUBLISHED
@@ -24,7 +19,7 @@ model User {
   email        String   @unique
   passwordHash String
   name         String
-  role         Role
+  role         String
   createdAt    DateTime @default(now())
 
   contributedItems Item[]        @relation("ContributedItems")

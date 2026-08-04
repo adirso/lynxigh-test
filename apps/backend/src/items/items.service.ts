@@ -1,4 +1,5 @@
-import type { Role, ItemStatus, Prisma } from '@prisma/client';
+import type { ItemStatus, Prisma } from '@prisma/client';
+import type { Role } from '../auth/roles.js';
 import { prisma } from '../db.js';
 import { createStorage } from '../storage/storage-port.js';
 import type { UploadedFile } from '../storage/storage-port.js';

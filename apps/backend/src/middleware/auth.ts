@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import type { Role } from '@prisma/client';
+import type { Role } from '../auth/roles.js';
 import { verifyAccessToken } from '../auth/jwt.js';
 import { UnauthorizedError, ForbiddenError } from '../errors.js';
 

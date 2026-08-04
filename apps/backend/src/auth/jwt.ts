@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { loadEnv } from '../env.js';
-import type { Role } from '@prisma/client';
+import { assertRole, type Role } from './roles.js';
 
 export type AccessTokenPayload = {
   sub: string;
@@ -18,5 +18,5 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
   if (typeof decoded === 'string' || !('sub' in decoded) || !('role' in decoded)) {
     throw new Error('Malformed token payload');
   }
-  return { sub: decoded.sub as string, role: decoded.role as Role };
+  return { sub: decoded.sub as string, role: assertRole(decoded.role as string) };
 }

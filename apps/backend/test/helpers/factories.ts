@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { Express } from 'express';
-import type { Role } from '@prisma/client';
+import type { Role } from '../../src/auth/roles.js';
+import { assertRole } from '../../src/auth/roles.js';
 import { prisma } from '../../src/db.js';
 import { hashPassword } from '../../src/auth/password.js';
 import { signAccessToken } from '../../src/auth/jwt.js';
@@ -20,7 +21,7 @@ export async function createUserWithRole(role: Role) {
   const user = await prisma.user.create({
     data: { email, passwordHash, name: `Test ${role}`, role },
   });
-  const token = signAccessToken({ sub: user.id, role: user.role });
+  const token = signAccessToken({ sub: user.id, role: assertRole(user.role) });
   return {
     token,
     user: { id: user.id, email: user.email, name: user.name, role: user.role },

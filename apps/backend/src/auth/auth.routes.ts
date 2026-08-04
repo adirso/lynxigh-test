@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../async-handler.js';
-import { register, login } from './auth.service.js';
+import { register, login, getCurrentUser } from './auth.service.js';
+import { requireAuth } from '../middleware/auth.js';
 import { ValidationError } from '../errors.js';
 
 // Public self-registration only ever creates CONTRIBUTOR accounts. `role` is
@@ -42,5 +43,14 @@ authRouter.post(
     }
     const result = await login(parsed.data);
     res.status(200).json(result);
+  }),
+);
+
+authRouter.get(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const user = await getCurrentUser(req.user!.id);
+    res.status(200).json(user);
   }),
 );
