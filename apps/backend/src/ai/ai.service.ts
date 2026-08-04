@@ -47,6 +47,7 @@ export async function generateDescription(input: GenerateDescriptionServiceInput
     });
   } catch (err) {
     if (err instanceof AiGenerationError) {
+      console.error('AI generation failed:', err);
       throw new BadGatewayError('AI description generation failed');
     }
     throw err;

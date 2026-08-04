@@ -3,7 +3,7 @@ import multer from 'multer';
 import { z } from 'zod';
 import { asyncHandler } from '../async-handler.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { ValidationError } from '../errors.js';
+import { ValidationError, ServiceUnavailableError } from '../errors.js';
 import { isAllowedImageMimeType } from '../storage/mime-types.js';
 import { CONDITIONS, LISTING_OPTIONS } from '../items/items.constants.js';
 import { isAiAvailable, generateDescription } from './ai.service.js';
@@ -54,6 +54,13 @@ aiRouter.post(
   '/generate-description',
   requireAuth,
   requireRole('CONTRIBUTOR'),
+  (req, _res, next) => {
+    if (!isAiAvailable()) {
+      next(new ServiceUnavailableError('AI description generation is not configured'));
+      return;
+    }
+    next();
+  },
   upload.array('photos', 10),
   asyncHandler(async (req, res) => {
     const files = (req.files as Express.Multer.File[]) ?? [];

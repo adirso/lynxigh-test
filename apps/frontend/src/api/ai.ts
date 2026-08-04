@@ -2,6 +2,8 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '../lib/api-client';
 import type { PickedPhoto } from '../components/PhotoPicker';
 
+const MAX_PHOTOS_FOR_GENERATION = 4;
+
 export type GenerateDescriptionValues = {
   title: string;
   categoryId: string;
@@ -24,7 +26,7 @@ function toFormData(values: GenerateDescriptionValues): FormData {
   if (values.categoryId) formData.set('categoryId', values.categoryId);
   formData.set('condition', values.condition);
   formData.set('options', JSON.stringify(values.options));
-  values.photos.forEach((p) => formData.append('photos', p.file));
+  values.photos.slice(0, MAX_PHOTOS_FOR_GENERATION).forEach((p) => formData.append('photos', p.file));
   return formData;
 }
 

@@ -15,4 +15,9 @@ export interface AiPort {
   generateDescription(input: GenerateDescriptionInput): Promise<string>;
 }
 
-export class AiGenerationError extends Error {}
+export class AiGenerationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AiGenerationError';
+  }
+}
