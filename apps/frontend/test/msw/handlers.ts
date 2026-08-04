@@ -21,6 +21,11 @@ export const handlers = [
     }
     return HttpResponse.json(JSON.parse(raw));
   }),
+  // Default: AI description generation is unavailable, matching a dev/CI
+  // environment with no OPENAI_API_KEY configured — the "Generate with AI"
+  // button stays hidden. Tests that specifically exercise the button
+  // override this with server.use(...).
+  http.get(`${API_URL}/ai/status`, () => HttpResponse.json({ available: false })),
 ];
 
 export { API_URL };

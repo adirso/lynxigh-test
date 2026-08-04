@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useCategories } from '../api/categories';
+import { useAiAvailability, useGenerateDescription } from '../api/ai';
 import { CONDITIONS, LISTING_OPTIONS } from '../items/items.constants';
 import PhotoPicker, { type PickedPhoto } from './PhotoPicker';
 import type { Item } from '../types/models';
@@ -38,6 +39,19 @@ export default function ItemForm({
   const [options, setOptions] = useState<string[]>(initialValues?.options ?? []);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { data: aiStatus } = useAiAvailability(requirePhotos);
+  const generateDescription = useGenerateDescription();
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function handleGenerateDescription() {
+    setAiError(null);
+    try {
+      const result = await generateDescription.mutateAsync({ title, categoryId, condition, options, photos });
+      setDescription(result.description);
+    } catch {
+      setAiError("Couldn't generate a description — try again or write your own.");
+    }
+  }
 
   function toggleOption(option: string) {
     setOptions((prev) => (prev.includes(option) ? prev.filter((o) => o !== option) : [...prev, option]));
@@ -165,6 +179,19 @@ export default function ItemForm({
 
       <div className="field">
         <label htmlFor="item-description">Description</label>
+        {requirePhotos && aiStatus?.available && (
+          <div style={{ marginBottom: 'var(--space-2)' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={photos.length === 0 || generateDescription.isPending}
+              onClick={handleGenerateDescription}
+            >
+              {generateDescription.isPending ? 'Generating…' : 'Generate with AI'}
+            </button>
+            {aiError && <p className="error-text">{aiError}</p>}
+          </div>
+        )}
         <textarea
           id="item-description"
           className="input"
